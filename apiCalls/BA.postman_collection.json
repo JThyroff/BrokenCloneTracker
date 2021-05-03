@@ -1,0 +1,126 @@
+{
+	"info": {
+		"_postman_id": "40602bd6-4222-4c92-a13e-480133dffe72",
+		"name": "BA",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Get Teamscale Commits",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/projects/jabref/revision/2dc0d5b2/commits",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"projects",
+						"jabref",
+						"revision",
+						"2dc0d5b2",
+						"commits"
+					]
+				},
+				"description": "http://localhost:8080/api.html?includeInternal=true#/Connectors/getCommitsForRevision\n\nSection connectors : /api/projects/{project}/revision/{revision}/commits\n\nHave to pass a revision string and recieve commit timestamp."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Commit Alerts",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/projects/jabref/commit-alerts?commit=1615199996000",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"projects",
+						"jabref",
+						"commit-alerts"
+					],
+					"query": [
+						{
+							"key": "commit",
+							"value": "1615199996000"
+						}
+					]
+				},
+				"description": "http://localhost:8080/api.html?includeInternal=true#/default/getCommitAlerts\n\nSection default : /api/projects/{project}/commit-alerts\n\nNeeds to pass a commit value timestamp array and recieve alerts."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Metric history commits",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/projects/jabref/metrics/history/commits?branch=main&max-milliseconds=-1&timestamp=1615199996000",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"projects",
+						"jabref",
+						"metrics",
+						"history",
+						"commits"
+					],
+					"query": [
+						{
+							"key": "branch",
+							"value": "main"
+						},
+						{
+							"key": "max-milliseconds",
+							"value": "-1"
+						},
+						{
+							"key": "timestamp",
+							"value": "1615199996000"
+						}
+					]
+				},
+				"description": "http://localhost:8080/api.html?includeInternal=true#/Metrics/getMetricHistoryCommits\n\nSection Metrics : /api/projects/{project}/metrics/history/commits\n\nHave to pass a timestamp to get a parent commit?"
+			},
+			"response": []
+		},
+		{
+			"name": "Get Finding by Id",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": ""
+				},
+				"description": "http://localhost:8080/api.html?includeInternal=true#/Findings/getFinding\n\nFindings : /api/projects/{project}/findings/{id} \n\nGets a Finding by passed Id"
+			},
+			"response": []
+		},
+		{
+			"name": "Get repository log entries",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": ""
+				},
+				"description": "http://localhost:8080/api.html?includeInternal=true#/Project/findLogEntriesInRange\n\nSection project : /api/projects/{project}/repository-log-range\n\nHave to pass many params and recieve all commits which have an alert on it."
+			},
+			"response": []
+		}
+	]
+}
