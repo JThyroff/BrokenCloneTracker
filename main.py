@@ -16,7 +16,11 @@ ACCESS_TOKEN = "ide-access-token"
 PROJECT_ID = "jabref"
 
 
-def show_projects(client):
+def show_projects(client: TeamscaleClient) -> None:
+    """
+    print the projects to console
+    :param client: the teamscale client
+    """
     print_separator()
     print_highlighted("List of available Projects: ")
 
@@ -25,7 +29,11 @@ def show_projects(client):
         print(str(project))
 
 
-def filter_alert_commits(client: TeamscaleClient):
+def filter_alert_commits(client: TeamscaleClient) -> None:
+    """
+    filters the project for commits with alerts.
+    :param client: the teamscale client
+    """
     url = get_project_api_service_url(client=client, service_name="repository-log-range")
     parameters = {"entry-count": 10,
                   # preserve-newer: Whether to preserve commits newer or older than the given timestamp.
@@ -43,22 +51,38 @@ def filter_alert_commits(client: TeamscaleClient):
                   "exclude-other-branches": False,
                   # privacy-aware: Controls whether only repository log entries are returned where the current user
                   # was the committer.
-                  "privacy-aware": False},
-    response: requests.Response = client.get(url, *parameters)
+                  "privacy-aware": False}
+
     print_separator()
     print_highlighted("Filtering for alert commits: " + str(url))
+
+    response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
     print(json.dumps(parsed, indent=4, sort_keys=True))
 
 
-def main():
+def get_commit_alerts(client: TeamscaleClient, commit_timestamp: int) -> None:
+    url = get_project_api_service_url(client, "commit-alerts")
+    parameters = {"commit": commit_timestamp}
+
+    print_separator()
+    print_highlighted("Getting commit alerts for timestamp " + str(commit_timestamp) + " at URL: " + str(url))
+
+    response: requests.Response = client.get(url, parameters)
+
+    parsed = json.loads(response.text)
+    print(json.dumps(parsed, indent=4, sort_keys=True))
+
+
+def main() -> None:
     client = TeamscaleClient(TEAMSCALE_URL, USERNAME, ACCESS_TOKEN, PROJECT_ID)
     client.check_api_version()
     show_projects(client)
     filter_alert_commits(client)
+    get_commit_alerts(client, 1597517409000)
 
 
-def parse_args():
+def parse_args() -> None:
     global TEAMSCALE_URL
     global USERNAME
     global ACCESS_TOKEN

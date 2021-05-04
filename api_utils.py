@@ -1,5 +1,5 @@
 def get_project_api_service_url(client, service_name):
-    """Returns the full url pointing to a project service.
+    """Returns the full url pointing to a project api service.
 
     Args:
        client: the client
