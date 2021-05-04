@@ -1,9 +1,12 @@
 import argparse
+import json
 
+import requests
 from teamscale_client import TeamscaleClient
 from teamscale_client.teamscale_client_config import TeamscaleClientConfig
 
 from api_utils import get_project_api_service_url
+from pretty_print import print_separator, print_highlighted
 
 TEAMSCALE_URL = "http://localhost:8080"
 
@@ -14,18 +17,38 @@ PROJECT_ID = "jabref"
 
 
 def show_projects(client):
+    print_separator()
+    print_highlighted("List of available Projects: ")
+
     projects = client.get_projects()
-    print([str(project) for project in projects])
+    for project in projects:
+        print(str(project))
 
 
 def filter_alert_commits(client: TeamscaleClient):
-    # url = "%s/%s" % (client.get_global_service_url('api/projects/')), "jabref/repository-log-range"
     url = get_project_api_service_url(client=client, service_name="repository-log-range")
-    print(url)
-
-
-# client.get()
-pass
+    parameters = {"entry-count": 10,
+                  # preserve-newer: Whether to preserve commits newer or older than the given timestamp.
+                  "preserve-newer": True,
+                  # include-bounds: Whether or not commits for the timestamps from the start and/or end commit are
+                  # included.
+                  "include-bounds": True,
+                  "t": "HEAD",
+                  "commit-types": ["CODE_COMMIT",
+                                   "ARCHITECTURE_CHANGE",
+                                   "CODE_REVIEW",
+                                   "EXTERNAL_ANALYSIS",
+                                   "BLACKLIST_COMMIT"],
+                  "commit-attribute": "HAS_ALERTS",
+                  "exclude-other-branches": False,
+                  # privacy-aware: Controls whether only repository log entries are returned where the current user
+                  # was the committer.
+                  "privacy-aware": False},
+    response: requests.Response = client.get(url, *parameters)
+    print_separator()
+    print_highlighted("Filtering for alert commits: " + str(url))
+    parsed = json.loads(response.text)
+    print(json.dumps(parsed, indent=4, sort_keys=True))
 
 
 def main():
@@ -68,12 +91,11 @@ def parse_args():
     if args.project_id:
         PROJECT_ID = args.project_id
 
-    print("∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇")
-    print("Parsed Arguments:")
+    print_separator()
+    print_highlighted("Parsed Arguments:")
     print("%s %s\n%s %s\n%s %s\n%s %s" % (
         "Teamscale URL :", str(TEAMSCALE_URL), "Username :", str(USERNAME), "Access Token :", str(ACCESS_TOKEN),
         "Project ID :", str(PROJECT_ID)))
-    print("∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇")
 
 
 if __name__ == "__main__":
