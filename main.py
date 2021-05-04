@@ -6,6 +6,7 @@ from teamscale_client import TeamscaleClient
 from teamscale_client.teamscale_client_config import TeamscaleClientConfig
 
 from api_utils import get_project_api_service_url
+from data import Commit
 from pretty_print import print_separator, print_highlighted
 
 TEAMSCALE_URL = "http://localhost:8080"
@@ -29,7 +30,7 @@ def show_projects(client: TeamscaleClient) -> None:
         print(str(project))
 
 
-def filter_alert_commits(client: TeamscaleClient) -> None:
+def filter_alert_commits(client: TeamscaleClient) -> [Commit]:
     """
     filters the project for commits with alerts.
     :param client: the teamscale client
@@ -58,7 +59,13 @@ def filter_alert_commits(client: TeamscaleClient) -> None:
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
-    print(json.dumps(parsed, indent=4, sort_keys=True))
+
+    commit_list = []
+    for e in parsed:
+        commit_list.append(e['commit'])
+
+    print(json.dumps(commit_list, indent=4, sort_keys=True))
+    return commit_list
 
 
 def get_commit_alerts(client: TeamscaleClient, commit_timestamp: int) -> None:
@@ -69,8 +76,8 @@ def get_commit_alerts(client: TeamscaleClient, commit_timestamp: int) -> None:
     print_highlighted("Getting commit alerts for timestamp " + str(commit_timestamp) + " at URL: " + str(url))
 
     response: requests.Response = client.get(url, parameters)
-
     parsed = json.loads(response.text)
+
     print(json.dumps(parsed, indent=4, sort_keys=True))
 
 
