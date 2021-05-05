@@ -47,6 +47,17 @@ class TextRegionLocation(object):
                                   json['type'],
                                   json['uniformPath'])
 
+    def __eq__(self, other):
+        if not isinstance(other, TextRegionLocation):
+            return NotImplemented
+        elif self is other:
+            return True
+        else:
+            return self.location == other.location and self.raw_end_line == other.raw_end_line \
+                   and self.raw_end_offset == other.raw_end_offset and self.raw_start_line == other.raw_start_line \
+                   and self.raw_start_offset == other.raw_start_offset and self.type == other.type \
+                   and self.uniform_path == other.uniform_path
+
 
 @auto_str
 class CommitAlertContext(object):
@@ -66,6 +77,17 @@ class CommitAlertContext(object):
                                   TextRegionLocation.from_json(json['oldCloneLocation']),
                                   json['removedCloneId'])
 
+    def __eq__(self, other):
+        if not isinstance(other, CommitAlertContext):
+            return NotImplemented
+        elif self is other:
+            return True
+        else:
+            return self.expected_clone_location == other.expected_clone_location \
+                   and self.expected_sibling_location == other.expected_sibling_location \
+                   and self.old_clone_location == other.old_clone_location \
+                   and self.removed_clone_id == other.removed_clone_id
+
 
 @auto_str
 class CommitAlert(object):
@@ -75,4 +97,12 @@ class CommitAlert(object):
 
     @classmethod
     def from_json(cls, json):
-        return CommitAlert(json['branchName'], json['parentCommits'], json['timestamp'], json['type'])
+        return CommitAlert(CommitAlertContext.from_json(json['context']), json['message'])
+
+    def __eq__(self, other):
+        if not isinstance(other, CommitAlert):
+            return NotImplemented
+        elif self is other:
+            return True
+        else:
+            return self.context == other.context and self.message == other.message
