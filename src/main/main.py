@@ -60,9 +60,7 @@ def filter_alert_commits(client: TeamscaleClient) -> [Commit]:
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
 
-    commit_list = []
-    for e in parsed:
-        commit_list.append(e['commit'])
+    commit_list = [entry['commit'] for entry in parsed]
 
     print(json.dumps(commit_list, indent=4, sort_keys=True))
     return commit_list
@@ -85,7 +83,7 @@ def main() -> None:
     client = TeamscaleClient(TEAMSCALE_URL, USERNAME, ACCESS_TOKEN, PROJECT_ID)
     client.check_api_version()
     show_projects(client)
-    filter_alert_commits(client)
+    alert_commits: [Commit] = filter_alert_commits(client)
     get_commit_alerts(client, 1597517409000)
 
 
