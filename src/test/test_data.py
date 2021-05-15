@@ -1,6 +1,6 @@
 import unittest
 
-from src.main.data import Commit, CommitAlert, CommitAlertContext, TextRegionLocation
+from src.main.data import Commit, CommitAlert, CommitAlertContext, TextRegionLocation, FileChange
 
 
 class TestCommit(unittest.TestCase):
@@ -131,6 +131,25 @@ class TestCommitAlert(unittest.TestCase):
         alert: CommitAlert = CommitAlert.from_json(commit_alert_json)
         self.assertEqual(alert.context, CommitAlertContext.from_json(commit_alert_json['context']))
         self.assertEqual(alert.message, "Found potential inconsistent clone change in HTMLChars.java")
+        pass
+
+
+class TestFileChange(unittest.TestCase):
+    def test_from_json(self):
+        file_change_json = {
+            "uniformPath": "src/main/java/org/jabref/logic/importer/WebFetchers.java",
+            "changeType": "EDIT",
+            "commit": {
+                "type": "simple",
+                "branchName": "master",
+                "timestamp": 1608743869000
+            }
+        }
+
+        file_change: FileChange = FileChange.from_json(file_change_json)
+        self.assertEqual(file_change.uniform_path, "src/main/java/org/jabref/logic/importer/WebFetchers.java")
+        self.assertEqual(file_change.change_type, "EDIT")
+        self.assertEqual(file_change.commit, Commit.from_json(file_change_json['commit']))
         pass
 
 

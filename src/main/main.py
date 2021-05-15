@@ -1,13 +1,12 @@
 import argparse
-import json
 
-import requests
 from teamscale_client import TeamscaleClient
 from teamscale_client.teamscale_client_config import TeamscaleClientConfig
 
-from api_utils import get_project_api_service_url
-from data import Commit, CommitAlert
+from data import Commit
 from pretty_print import print_separator, print_highlighted
+from src.main.analysis import is_file_affected_at_commit
+from src.main.api import filter_alert_commits, get_commit_alerts, get_affected_files
 
 TEAMSCALE_URL = "http://localhost:8080"
 
@@ -30,66 +29,6 @@ def show_projects(client: TeamscaleClient) -> None:
         print(str(project))
 
 
-def filter_alert_commits(client: TeamscaleClient) -> [Commit]:
-    """
-    filters the project for commits with alerts.
-    :param client: the teamscale client
-    """
-    url = get_project_api_service_url(client=client, service_name="repository-log-range")
-    parameters = {"entry-count": 10,
-                  # preserve-newer: Whether to preserve commits newer or older than the given timestamp.
-                  "preserve-newer": True,
-                  # include-bounds: Whether or not commits for the timestamps from the start and/or end commit are
-                  # included.
-                  "include-bounds": True,
-                  "t": "HEAD",
-                  "commit-types": ["CODE_COMMIT",
-                                   "ARCHITECTURE_CHANGE",
-                                   "CODE_REVIEW",
-                                   "EXTERNAL_ANALYSIS",
-                                   "BLACKLIST_COMMIT"],
-                  "commit-attribute": "HAS_ALERTS",
-                  "exclude-other-branches": False,
-                  # privacy-aware: Controls whether only repository log entries are returned where the current user
-                  # was the committer.
-                  "privacy-aware": False}
-
-    print_separator()
-    print_highlighted("Filtering for alert commits: " + str(url))
-
-    response: requests.Response = client.get(url, parameters)
-    parsed = json.loads(response.text)
-
-    commit_list = [entry['commit'] for entry in parsed]
-
-    print(json.dumps(commit_list, indent=4, sort_keys=True))
-    return commit_list
-
-
-def get_commit_alerts(client: TeamscaleClient, commit_timestamp: int) -> [(Commit, [CommitAlert])]:
-    url = get_project_api_service_url(client, "commit-alerts")
-    parameters = {"commit": commit_timestamp}
-
-    print_separator()
-    print_highlighted("Getting commit alerts for timestamp " + str(commit_timestamp) + " at URL: " + str(url))
-
-    response: requests.Response = client.get(url, parameters)
-    parsed = json.loads(response.text)
-    print(json.dumps(parsed, indent=4, sort_keys=True))
-
-    commit_alert_list_tuple_list: [(Commit, [CommitAlert])] = []
-
-    for i in range(len(parsed)):
-        alert_list: [CommitAlert] = []
-        for entry in parsed[i]['alerts']:
-            alert_list.append(CommitAlert.from_json(entry))
-        commit: Commit = Commit.from_json(parsed[i]['commit'])
-
-        commit_alert_list_tuple_list.append((commit, alert_list))
-
-    return commit_alert_list_tuple_list
-
-
 def main() -> None:
     client = TeamscaleClient(TEAMSCALE_URL, USERNAME, ACCESS_TOKEN, PROJECT_ID)
     client.check_api_version()
@@ -97,6 +36,9 @@ def main() -> None:
     alert_commits: [Commit] = filter_alert_commits(client)
     commit: Commit = Commit.from_json(alert_commits[0])
     get_commit_alerts(client, commit.timestamp)
+    a = get_affected_files(client, commit.timestamp)
+    b = is_file_affected_at_commit("src/main/java/org/jabref/JabRefGUI.java", a)
+    print(b)
 
 
 def parse_args() -> None:
