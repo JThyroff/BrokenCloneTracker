@@ -1,6 +1,6 @@
 import unittest
 
-from src.main.data import Commit, CommitAlert, CommitAlertContext, TextRegionLocation, FileChange
+from src.main.data import Commit, CommitAlert, CommitAlertContext, TextRegionLocation, FileChange, DiffDescription
 
 
 class TestCommit(unittest.TestCase):
@@ -24,7 +24,6 @@ class TestCommit(unittest.TestCase):
         self.assertEqual(parent_should, parent_actual)
         self.assertEqual(commit.timestamp, 1597731723000)
         self.assertEqual(commit.type, "parented")
-        pass
 
 
 class TestTextRegionLocation(unittest.TestCase):
@@ -47,7 +46,6 @@ class TestTextRegionLocation(unittest.TestCase):
         self.assertEqual(text_region_location.type, 'TextRegionLocation')
         self.assertEqual(text_region_location.uniform_path,
                          "src/main/java/org/jabref/logic/layout/format/HTMLChars.java")
-        pass
 
 
 class TestCommitAlertContext(unittest.TestCase):
@@ -131,7 +129,6 @@ class TestCommitAlert(unittest.TestCase):
         alert: CommitAlert = CommitAlert.from_json(commit_alert_json)
         self.assertEqual(alert.context, CommitAlertContext.from_json(commit_alert_json['context']))
         self.assertEqual(alert.message, "Found potential inconsistent clone change in HTMLChars.java")
-        pass
 
 
 class TestFileChange(unittest.TestCase):
@@ -150,7 +147,154 @@ class TestFileChange(unittest.TestCase):
         self.assertEqual(file_change.uniform_path, "src/main/java/org/jabref/logic/importer/WebFetchers.java")
         self.assertEqual(file_change.change_type, "EDIT")
         self.assertEqual(file_change.commit, Commit.from_json(file_change_json['commit']))
-        pass
+
+
+class TestDiffDescription(unittest.TestCase):
+    def test_from_json(self):
+        diff_description_json = {
+            "leftChangeLines": [
+                23,
+                25,
+                29,
+                31,
+                99,
+                100,
+                108,
+                109,
+                130,
+                131,
+                172,
+                174
+            ],
+            "leftChangeRegions": [
+                975,
+                989,
+                990,
+                1031,
+                1302,
+                1315,
+                1316,
+                1357,
+                4238,
+                4239,
+                4256,
+                4257,
+                4280,
+                4282,
+                4730,
+                4731,
+                4747,
+                4748,
+                4771,
+                4773,
+                5800,
+                5801,
+                5817,
+                5818,
+                5841,
+                5843,
+                7504,
+                7505,
+                7521,
+                7522,
+                7545,
+                7547,
+                7569,
+                7570,
+                7587,
+                7588,
+                7611,
+                7613
+            ],
+            "name": "token-based",
+            "rightChangeLines": [
+                23,
+                24,
+                28,
+                29,
+                97,
+                98,
+                106,
+                107,
+                128,
+                129,
+                170,
+                172
+            ],
+            "rightChangeRegions": []
+        }
+
+        diff_description: DiffDescription = DiffDescription.from_json(diff_description_json)
+        self.assertEqual(diff_description.name, "token-based")
+        self.assertEqual(diff_description.left_change_lines, [
+            23,
+            25,
+            29,
+            31,
+            99,
+            100,
+            108,
+            109,
+            130,
+            131,
+            172,
+            174
+        ])
+        self.assertEqual(diff_description.left_change_regions, [
+            975,
+            989,
+            990,
+            1031,
+            1302,
+            1315,
+            1316,
+            1357,
+            4238,
+            4239,
+            4256,
+            4257,
+            4280,
+            4282,
+            4730,
+            4731,
+            4747,
+            4748,
+            4771,
+            4773,
+            5800,
+            5801,
+            5817,
+            5818,
+            5841,
+            5843,
+            7504,
+            7505,
+            7521,
+            7522,
+            7545,
+            7547,
+            7569,
+            7570,
+            7587,
+            7588,
+            7611,
+            7613
+        ])
+        self.assertEqual(diff_description.right_change_lines, [
+            23,
+            24,
+            28,
+            29,
+            97,
+            98,
+            106,
+            107,
+            128,
+            129,
+            170,
+            172
+        ])
+        self.assertEqual(diff_description.right_change_regions, [])
 
 
 if __name__ == '__main__':

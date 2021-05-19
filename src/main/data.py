@@ -127,3 +127,32 @@ class FileChange(object):
         else:
             return self.uniform_path == other.uniform_path and self.change_type == other.change_type \
                    and self.commit == other.commit
+
+
+@auto_str
+class DiffDescription:
+
+    def __init__(self, name: str, left_change_lines: [int], left_change_regions: [int], right_change_lines: [int],
+                 right_change_regions: [int]):
+        self.name = name
+        self.left_change_lines = left_change_lines
+        self.left_change_regions = left_change_regions
+        self.right_change_lines = right_change_lines
+        self.right_change_regions = right_change_regions
+
+    @classmethod
+    def from_json(cls, json):
+        return DiffDescription(json['name'], json['leftChangeLines'], json['leftChangeRegions'],
+                               json["rightChangeLines"],
+                               json["rightChangeRegions"])
+
+    def __eq__(self, other):
+        if not isinstance(other, DiffDescription):
+            return NotImplemented
+        elif self is other:
+            return True
+        else:
+            return self.name == other.name and self.left_change_lines == other.left_change_lines \
+                   and self.left_change_regions == other.left_change_regions \
+                   and self.right_change_lines == other.right_change_lines \
+                   and self.right_change_regions == other.right_change_regions

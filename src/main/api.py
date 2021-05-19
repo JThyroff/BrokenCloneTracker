@@ -3,8 +3,8 @@ import json
 import requests
 from teamscale_client import TeamscaleClient
 
-from src.main.api_utils import get_project_api_service_url
-from src.main.data import Commit, CommitAlert, FileChange
+from src.main.api_utils import get_project_api_service_url, get_global_service_url
+from src.main.data import Commit, CommitAlert, FileChange, DiffDescription
 from src.main.pretty_print import print_separator, print_highlighted
 
 
@@ -87,3 +87,28 @@ def get_affected_files(client: TeamscaleClient, commit_timestamp: int) -> [FileC
     affected_files: [FileChange] = [FileChange.from_json(j) for j in parsed]
 
     return affected_files
+
+
+def get_token_based_diff(client: TeamscaleClient, left: str, left_commit_timestamp: int, right: str,
+                         right_commit_timestamp) -> DiffDescription:
+    url = get_global_service_url(client, "api/compare-elements")
+
+    parameters = {"left": str(client.project) + "/" + left + "#@#" + str(left_commit_timestamp),
+                  "right": str(client.project) + "/" + right + "#@#" + str(right_commit_timestamp),
+                  "normalized": False}
+    # I currently do not understand, whether "normalized" should be true or not : line-based? when disabled?
+
+    print_separator()
+    print_highlighted("Getting diff for left: " + left + " at commit " + str(left_commit_timestamp))
+    print_highlighted("            and right: " + right + " at commit " + str(right_commit_timestamp))
+
+    response: requests.Response = client.get(url, parameters)
+    parsed = json.loads(response.text)
+    print(json.dumps(parsed, indent=4, sort_keys=True))
+
+    for e in parsed:
+        d: DiffDescription = DiffDescription.from_json(e)
+        if d.name == 'token-based':
+            return d
+
+    return NotImplemented
