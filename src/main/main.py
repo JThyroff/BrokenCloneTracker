@@ -3,10 +3,10 @@ import argparse
 from teamscale_client import TeamscaleClient
 from teamscale_client.teamscale_client_config import TeamscaleClientConfig
 
-from data import Commit, DiffDescription
+from data import Commit, DiffDescription, DiffType
 from pretty_print import print_separator, print_highlighted
 from src.main.analysis import is_file_affected_at_commit
-from src.main.api import filter_alert_commits, get_commit_alerts, get_affected_files, get_token_based_diff
+from src.main.api import filter_alert_commits, get_commit_alerts, get_affected_files, get_diff
 
 TEAMSCALE_URL = "http://localhost:8080"
 
@@ -39,9 +39,10 @@ def main() -> None:
     a = get_affected_files(client, commit.timestamp)
     b = is_file_affected_at_commit("src/main/java/org/jabref/JabRefGUI.java", a)
     print(b)
-    d: DiffDescription = get_token_based_diff(client, "src/main/java/org/jabref/logic/importer/WebFetchers.java",
-                                              1606807412000,
-                                              "src/main/java/org/jabref/logic/importer/WebFetchers.java", 1608743869000)
+    d: DiffDescription = get_diff(client, DiffType.TOKEN_BASED,
+                                  "src/main/java/org/jabref/logic/importer/WebFetchers.java",
+                                  1606807412000,
+                                  "src/main/java/org/jabref/logic/importer/WebFetchers.java", 1608743869000)
     print(str(d))
 
 

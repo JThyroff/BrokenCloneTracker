@@ -1,3 +1,5 @@
+from enum import Enum
+
 from teamscale_client.utils import auto_str
 
 
@@ -129,10 +131,16 @@ class FileChange(object):
                    and self.commit == other.commit
 
 
+class DiffType(Enum):
+    TOKEN_BASED = "token-based"
+    LINE_BASED = "line-based"
+    LINE_BASED_IGNORE_WHITESPACE = "line-based (ignore whitespace)"
+
+
 @auto_str
 class DiffDescription:
 
-    def __init__(self, name: str, left_change_lines: [int], left_change_regions: [int], right_change_lines: [int],
+    def __init__(self, name: DiffType, left_change_lines: [int], left_change_regions: [int], right_change_lines: [int],
                  right_change_regions: [int]):
         self.name = name
         self.left_change_lines = left_change_lines

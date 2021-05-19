@@ -4,7 +4,7 @@ import requests
 from teamscale_client import TeamscaleClient
 
 from src.main.api_utils import get_project_api_service_url, get_global_service_url
-from src.main.data import Commit, CommitAlert, FileChange, DiffDescription
+from src.main.data import Commit, CommitAlert, FileChange, DiffDescription, DiffType
 from src.main.pretty_print import print_separator, print_highlighted
 
 
@@ -89,8 +89,9 @@ def get_affected_files(client: TeamscaleClient, commit_timestamp: int) -> [FileC
     return affected_files
 
 
-def get_token_based_diff(client: TeamscaleClient, left: str, left_commit_timestamp: int, right: str,
-                         right_commit_timestamp) -> DiffDescription:
+def get_diff(client: TeamscaleClient, diff_type: DiffType, left: str, left_commit_timestamp: int, right: str,
+             right_commit_timestamp) -> DiffDescription:
+    """get a token based diff for two files and given timestamps"""
     url = get_global_service_url(client, "api/compare-elements")
 
     parameters = {"left": str(client.project) + "/" + left + "#@#" + str(left_commit_timestamp),
@@ -108,7 +109,7 @@ def get_token_based_diff(client: TeamscaleClient, left: str, left_commit_timesta
 
     for e in parsed:
         d: DiffDescription = DiffDescription.from_json(e)
-        if d.name == 'token-based':
+        if d.name == diff_type.value:
             return d
 
     return NotImplemented

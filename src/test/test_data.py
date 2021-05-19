@@ -1,6 +1,7 @@
 import unittest
 
-from src.main.data import Commit, CommitAlert, CommitAlertContext, TextRegionLocation, FileChange, DiffDescription
+from src.main.data import Commit, CommitAlert, CommitAlertContext, TextRegionLocation, FileChange, DiffDescription, \
+    DiffType
 
 
 class TestCommit(unittest.TestCase):
@@ -225,7 +226,7 @@ class TestDiffDescription(unittest.TestCase):
         }
 
         diff_description: DiffDescription = DiffDescription.from_json(diff_description_json)
-        self.assertEqual(diff_description.name, "token-based")
+        self.assertEqual(diff_description.name, DiffType.TOKEN_BASED.value)
         self.assertEqual(diff_description.left_change_lines, [
             23,
             25,
