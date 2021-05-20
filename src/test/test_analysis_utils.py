@@ -1,6 +1,6 @@
 import unittest
 
-from src.main.analysis import is_file_affected_at_commit, are_left_lines_affected_at_diff
+from src.main.analysis_utils import is_file_affected_at_commit, are_left_lines_affected_at_diff
 from src.main.data import FileChange, DiffDescription
 
 
@@ -27,7 +27,7 @@ def build_test_list() -> [FileChange]:
     return [FileChange.from_json(file_change_json_1), FileChange.from_json(file_change_json_2)]
 
 
-class TestAnalysis(unittest.TestCase):
+class TestAnalysisUtils(unittest.TestCase):
     def test_is_file_affected_at_commit(self):
         tl = build_test_list()
         self.assertEqual(True, is_file_affected_at_commit("src/main/java/org/jabref/gui/util/ThemeLoader.java", tl))

@@ -5,7 +5,7 @@ from teamscale_client.teamscale_client_config import TeamscaleClientConfig
 
 from data import Commit, DiffDescription, DiffType
 from pretty_print import print_separator, print_highlighted
-from src.main.analysis import is_file_affected_at_commit
+from src.main.analysis_utils import is_file_affected_at_commit, are_left_lines_affected_at_diff
 from src.main.api import filter_alert_commits, get_commit_alerts, get_affected_files, get_diff
 
 TEAMSCALE_URL = "http://localhost:8080"
@@ -44,6 +44,7 @@ def main() -> None:
                                   1606807412000,
                                   "src/main/java/org/jabref/logic/importer/WebFetchers.java", 1608743869000)
     print(str(d))
+    print(str(are_left_lines_affected_at_diff(93, 105, d)))
 
 
 def parse_args() -> None:
