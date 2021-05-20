@@ -1,5 +1,7 @@
 from enum import Enum
 
+import portion
+from portion import Interval
 from teamscale_client.utils import auto_str
 
 
@@ -137,16 +139,33 @@ class DiffType(Enum):
     LINE_BASED_IGNORE_WHITESPACE = "line-based (ignore whitespace)"
 
 
+def list_to_interval_list(int_list: [int]) -> [Interval]:
+    """Takes an int list and converts every two ints to an interval"""
+    assert len(int_list) % 2 == 0
+    to_return: [Interval] = []
+    idx: int = 0
+    while idx < len(int_list):
+        to_return.append(
+            portion.closedopen(int_list[idx], int_list[idx + 1]))
+        idx = idx + 2
+    return to_return
+
+
 @auto_str
 class DiffDescription:
 
     def __init__(self, name: DiffType, left_change_lines: [int], left_change_regions: [int], right_change_lines: [int],
                  right_change_regions: [int]):
         self.name = name
-        self.left_change_lines = left_change_lines
-        self.left_change_regions = left_change_regions
-        self.right_change_lines = right_change_lines
-        self.right_change_regions = right_change_regions
+        self.left_change_line_intervals = []
+        self.right_change_line_intervals = []
+        self.left_change_region_intervals = []
+        self.right_change_region_intervals = []
+        """The lists are organised in pairs. Save them as Intervals"""
+        self.left_change_line_intervals = list_to_interval_list(left_change_lines)
+        self.right_change_line_intervals = list_to_interval_list(right_change_lines)
+        self.left_change_region_intervals = list_to_interval_list(left_change_regions)
+        self.right_change_region_intervals = list_to_interval_list(right_change_regions)
 
     @classmethod
     def from_json(cls, json):

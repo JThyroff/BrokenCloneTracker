@@ -35,7 +35,7 @@ def main() -> None:
     show_projects(client)
     alert_commits: [Commit] = filter_alert_commits(client)
     commit: Commit = Commit.from_json(alert_commits[0])
-    get_commit_alerts(client, commit.timestamp)
+    get_commit_alerts(client, 1608743869000)
     a = get_affected_files(client, commit.timestamp)
     b = is_file_affected_at_commit("src/main/java/org/jabref/JabRefGUI.java", a)
     print(b)

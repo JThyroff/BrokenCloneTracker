@@ -1,5 +1,7 @@
 import unittest
 
+import portion
+
 from src.main.data import Commit, CommitAlert, CommitAlertContext, TextRegionLocation, FileChange, DiffDescription, \
     DiffType
 
@@ -227,75 +229,45 @@ class TestDiffDescription(unittest.TestCase):
 
         diff_description: DiffDescription = DiffDescription.from_json(diff_description_json)
         self.assertEqual(diff_description.name, DiffType.TOKEN_BASED.value)
-        self.assertEqual(diff_description.left_change_lines, [
-            23,
-            25,
-            29,
-            31,
-            99,
-            100,
-            108,
-            109,
-            130,
-            131,
-            172,
-            174
+        fun = portion.closedopen
+        self.assertEqual(diff_description.left_change_line_intervals, [
+            fun(23, 25),
+            fun(29, 31),
+            fun(99, 100),
+            fun(108, 109),
+            fun(130, 131),
+            fun(172, 174)
         ])
-        self.assertEqual(diff_description.left_change_regions, [
-            975,
-            989,
-            990,
-            1031,
-            1302,
-            1315,
-            1316,
-            1357,
-            4238,
-            4239,
-            4256,
-            4257,
-            4280,
-            4282,
-            4730,
-            4731,
-            4747,
-            4748,
-            4771,
-            4773,
-            5800,
-            5801,
-            5817,
-            5818,
-            5841,
-            5843,
-            7504,
-            7505,
-            7521,
-            7522,
-            7545,
-            7547,
-            7569,
-            7570,
-            7587,
-            7588,
-            7611,
-            7613
+        self.assertEqual(diff_description.left_change_region_intervals, [
+            fun(975, 989),
+            fun(990, 1031),
+            fun(1302, 1315),
+            fun(1316, 1357),
+            fun(4238, 4239),
+            fun(4256, 4257),
+            fun(4280, 4282),
+            fun(4730, 4731),
+            fun(4747, 4748),
+            fun(4771, 4773),
+            fun(5800, 5801),
+            fun(5817, 5818),
+            fun(5841, 5843),
+            fun(7504, 7505),
+            fun(7521, 7522),
+            fun(7545, 7547),
+            fun(7569, 7570),
+            fun(7587, 7588),
+            fun(7611, 7613)
         ])
-        self.assertEqual(diff_description.right_change_lines, [
-            23,
-            24,
-            28,
-            29,
-            97,
-            98,
-            106,
-            107,
-            128,
-            129,
-            170,
-            172
+        self.assertEqual(diff_description.right_change_line_intervals, [
+            fun(23, 24),
+            fun(28, 29),
+            fun(97, 98),
+            fun(106, 107),
+            fun(128, 129),
+            fun(170, 172)
         ])
-        self.assertEqual(diff_description.right_change_regions, [])
+        self.assertEqual(diff_description.right_change_region_intervals, [])
 
 
 if __name__ == '__main__':
