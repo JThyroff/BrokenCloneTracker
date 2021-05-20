@@ -113,3 +113,13 @@ def get_diff(client: TeamscaleClient, diff_type: DiffType, left: str, left_commi
             return d
 
     return NotImplemented
+
+
+def get_repository_summary(client: TeamscaleClient) -> tuple[int, int]:
+    url = get_project_api_service_url(client, "repository-summary")
+    parameters = {"only-first-and-last": True}
+
+    response: requests.Response = client.get(url, parameters)
+    parsed = json.loads(response.text)
+    print(json.dumps(parsed, indent=4, sort_keys=True))
+    return parsed['firstCommit'], parsed['mostRecentCommit']
