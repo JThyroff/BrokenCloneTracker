@@ -3,17 +3,20 @@ import json
 import requests
 from teamscale_client import TeamscaleClient
 
+from defintions import JAVA_INT_MAX
 from src.main.api_utils import get_project_api_service_url, get_global_service_url
 from src.main.data import Commit, CommitAlert, FileChange, DiffDescription, DiffType
 from src.main.pretty_print import print_separator, print_highlighted
 
 
-def filter_alert_commits(client: TeamscaleClient) -> [Commit]:
+def filter_alert_commits(client: TeamscaleClient, start_commit_timestamp: int, end_commit_timestamp) -> [Commit]:
     """
-    filters the project for commits with alerts.
+    filters the project for commits with alerts. Section: project
     """
     url = get_project_api_service_url(client=client, service_name="repository-log-range")
-    parameters = {"entry-count": 10,
+    parameters = {"start": start_commit_timestamp,
+                  "end": end_commit_timestamp,
+                  "entry-count": JAVA_INT_MAX,
                   # preserve-newer: Whether to preserve commits newer or older than the given timestamp.
                   "preserve-newer": True,
                   # include-bounds: Whether or not commits for the timestamps from the start and/or end commit are
@@ -31,15 +34,11 @@ def filter_alert_commits(client: TeamscaleClient) -> [Commit]:
                   # was the committer.
                   "privacy-aware": False}
 
-    print_separator()
-    print_highlighted("Filtering for alert commits: " + str(url))
-
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
 
     commit_list = [entry['commit'] for entry in parsed]
 
-    print(json.dumps(commit_list, indent=4, sort_keys=False))
     return commit_list
 
 
