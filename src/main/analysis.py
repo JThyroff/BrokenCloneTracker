@@ -1,3 +1,4 @@
+import json
 from json import JSONDecodeError
 from pathlib import Path
 from typing import TextIO
@@ -6,7 +7,8 @@ import jsonpickle
 from teamscale_client import TeamscaleClient
 
 from defintions import get_alert_file_name, get_project_dir
-from src.main.api import get_repository_summary, filter_alert_commits
+from src.main.api import get_repository_summary, filter_alert_commits, get_commit_alerts
+from src.main.data import CommitAlert, Commit
 from src.main.persistence import AlertFile
 
 
@@ -52,3 +54,11 @@ def update_filtered_alert_commits(client: TeamscaleClient):
             file.write(jsonpickle.encode(alert_file))
         analysis_start = step + 1
         pass
+
+
+def analyse_one_alert_commit(client: TeamscaleClient, commit_timestamp: int):
+    alerts: dict[Commit, [CommitAlert]] = get_commit_alerts(client, commit_timestamp)
+    s = jsonpickle.encode(alerts)
+    parsed = json.loads(s)
+    print(json.dumps(parsed, indent=4))
+    pass

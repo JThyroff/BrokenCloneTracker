@@ -31,6 +31,9 @@ class Commit(object):
             return self.branch == other.branch and self.timestamp == other.timestamp \
                    and self.parent_commits == other.parent_commits and self.type == other.type
 
+    def __hash__(self):
+        return hash((self.branch, self.timestamp))
+
 
 @auto_str
 class TextRegionLocation(object):

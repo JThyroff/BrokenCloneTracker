@@ -4,7 +4,7 @@ from teamscale_client import TeamscaleClient
 from teamscale_client.teamscale_client_config import TeamscaleClientConfig
 
 from pretty_print import print_separator, print_highlighted
-from src.main.analysis import update_filtered_alert_commits
+from src.main.analysis import update_filtered_alert_commits, analyse_one_alert_commit
 from src.main.analysis_utils import are_left_lines_affected_at_diff, is_file_affected_at_commit
 from src.main.api import get_diff, filter_alert_commits, get_commit_alerts, get_affected_files, get_repository_summary
 from src.main.data import DiffType, Commit, DiffDescription
@@ -33,9 +33,10 @@ def show_projects(client: TeamscaleClient) -> None:
 def main() -> None:
     client = TeamscaleClient(TEAMSCALE_URL, USERNAME, ACCESS_TOKEN, PROJECT_ID)
     client.check_api_version()
+    analyse_one_alert_commit(client, 1521580769000)
+    return
     update_filtered_alert_commits(client)
     get_repository_summary(client)
-    return
     show_projects(client)
     alert_commits: [Commit] = filter_alert_commits(client)
     commit: Commit = Commit.from_json(alert_commits[0])

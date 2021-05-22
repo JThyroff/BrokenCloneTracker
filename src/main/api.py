@@ -11,7 +11,8 @@ from src.main.pretty_print import print_separator, print_highlighted
 
 def filter_alert_commits(client: TeamscaleClient, start_commit_timestamp: int, end_commit_timestamp) -> [Commit]:
     """
-    filters the project for commits with alerts. Section: project
+    filters the project for commits with alerts.
+    Section: project
     """
     url = get_project_api_service_url(client=client, service_name="repository-log-range")
     parameters = {"start": start_commit_timestamp,
@@ -42,21 +43,22 @@ def filter_alert_commits(client: TeamscaleClient, start_commit_timestamp: int, e
     return commit_list
 
 
-def get_commit_alerts(client: TeamscaleClient, commit_timestamp: int) -> [(Commit, [CommitAlert])]:
+def get_commit_alerts(client: TeamscaleClient, commit_timestamps: [int]) -> dict[Commit, [CommitAlert]]:
     """
-    get commit alerts for given commit timestamp. Returns a tuple list of (Commit, [CommitAlert])
+    get commit alerts for given commit timestamps. Returns a tuple list of (Commit, [CommitAlert])
+    Section: default
     """
     url = get_project_api_service_url(client, "commit-alerts")
-    parameters = {"commit": commit_timestamp}
+    parameters = {"commit": commit_timestamps}
 
     print_separator()
-    print_highlighted("Getting commit alerts for timestamp " + str(commit_timestamp) + " at URL: " + str(url))
+    print_highlighted("Getting commit alerts for timestamp " + str(commit_timestamps) + " at URL: " + str(url))
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
     print(json.dumps(parsed, indent=4, sort_keys=False))
 
-    commit_alert_list_tuple_list: [(Commit, [CommitAlert])] = []
+    commit_alert_list_dict: dict[Commit, [CommitAlert]] = dict()
 
     for i in range(len(parsed)):
         alert_list: [CommitAlert] = []
@@ -64,9 +66,9 @@ def get_commit_alerts(client: TeamscaleClient, commit_timestamp: int) -> [(Commi
             alert_list.append(CommitAlert.from_json(entry))
         commit: Commit = Commit.from_json(parsed[i]['commit'])
 
-        commit_alert_list_tuple_list.append((commit, alert_list))
+        commit_alert_list_dict.update({commit: alert_list})
 
-    return commit_alert_list_tuple_list
+    return commit_alert_list_dict
 
 
 def get_affected_files(client: TeamscaleClient, commit_timestamp: int) -> [FileChange]:
