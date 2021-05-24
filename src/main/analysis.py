@@ -7,8 +7,8 @@ import jsonpickle
 from teamscale_client import TeamscaleClient
 
 from defintions import get_alert_file_name, get_project_dir
-from src.main.api import get_repository_summary, filter_alert_commits, get_commit_alerts
-from src.main.data import CommitAlert, Commit
+from src.main.api import get_repository_summary, get_repository_commits, get_commit_alerts
+from src.main.data import CommitAlert, Commit, CommitAlertContext, TextRegionLocation
 from src.main.persistence import AlertFile
 
 
@@ -48,7 +48,7 @@ def update_filtered_alert_commits(client: TeamscaleClient):
         step = analysis_start + analysis_step
         if step > alert_file.most_recent_commit:
             step = alert_file.most_recent_commit
-        alert_file.alert_commit_list.extend(filter_alert_commits(client, analysis_start, step))
+        alert_file.alert_commit_list.extend(get_repository_commits(client, analysis_start, step, filter_alerts=True))
         alert_file.analysed_until = step
         with open(file_name, "w") as file:
             file.write(jsonpickle.encode(alert_file))
@@ -61,4 +61,39 @@ def analyse_one_alert_commit(client: TeamscaleClient, commit_timestamp: int):
     s = jsonpickle.encode(alerts)
     parsed = json.loads(s)
     print(json.dumps(parsed, indent=4))
+
+    alert_list: [CommitAlert] = []
+    for key in alerts.keys():
+        if key.type == Commit and key.timestamp == commit_timestamp:
+            alert_list = alerts[key]
+            pass
+    for i in alert_list:
+        i: CommitAlert
+        ac: CommitAlertContext = i.context
+        old_clone_loc: TextRegionLocation = ac.old_clone_location
+
+        print(i)
+        pass
+
+        summary: tuple[int, int] = get_repository_summary(client)
+
+        # start analysis
+        analysis_start: int = commit_timestamp
+        analysis_step: int = 15555555_000  # milliseconds. 6 months
+        commit_list: [Commit] = []
+        while analysis_start < summary[1]:
+            step = analysis_start + analysis_step
+            if step > summary[1]:
+                step = summary[1]
+            new_commits = get_repository_commits(client, analysis_start, step)
+            for commit in new_commits:
+                # Goal: In the end one want to say which category fits the file. three options
+                # so check diff
+                pass
+            commit_list.extend(new_commits)
+
+            analysis_start = step + 1
+            pass
+
+    print(alerts.keys())
     pass

@@ -9,9 +9,11 @@ from src.main.data import Commit, CommitAlert, FileChange, DiffDescription, Diff
 from src.main.pretty_print import print_separator, print_highlighted
 
 
-def filter_alert_commits(client: TeamscaleClient, start_commit_timestamp: int, end_commit_timestamp) -> [Commit]:
+def get_repository_commits(client: TeamscaleClient, start_commit_timestamp: int, end_commit_timestamp,
+                           filter_alerts=False) -> [Commit]:
     """
-    filters the project for commits with alerts.
+    get repository commits for the project.
+    filters for alert commits only optionally
     Section: project
     """
     url = get_project_api_service_url(client=client, service_name="repository-log-range")
@@ -29,11 +31,13 @@ def filter_alert_commits(client: TeamscaleClient, start_commit_timestamp: int, e
                                    "CODE_REVIEW",
                                    "EXTERNAL_ANALYSIS",
                                    "BLACKLIST_COMMIT"],
-                  "commit-attribute": "HAS_ALERTS",
                   "exclude-other-branches": False,
                   # privacy-aware: Controls whether only repository log entries are returned where the current user
                   # was the committer.
                   "privacy-aware": False}
+
+    if filter_alerts:
+        parameters.update({"commit-attribute": "HAS_ALERTS"})
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)

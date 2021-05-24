@@ -6,7 +6,7 @@ from teamscale_client.teamscale_client_config import TeamscaleClientConfig
 from pretty_print import print_separator, print_highlighted
 from src.main.analysis import update_filtered_alert_commits, analyse_one_alert_commit
 from src.main.analysis_utils import are_left_lines_affected_at_diff, is_file_affected_at_commit
-from src.main.api import get_diff, filter_alert_commits, get_commit_alerts, get_affected_files, get_repository_summary
+from src.main.api import get_diff, get_repository_commits, get_commit_alerts, get_affected_files, get_repository_summary
 from src.main.data import DiffType, Commit, DiffDescription
 
 TEAMSCALE_URL = "http://localhost:8080"
@@ -38,7 +38,7 @@ def main() -> None:
     update_filtered_alert_commits(client)
     get_repository_summary(client)
     show_projects(client)
-    alert_commits: [Commit] = filter_alert_commits(client)
+    alert_commits: [Commit] = get_repository_commits(client)
     commit: Commit = Commit.from_json(alert_commits[0])
     get_commit_alerts(client, 1608743869000)
     a = get_affected_files(client, commit.timestamp)
