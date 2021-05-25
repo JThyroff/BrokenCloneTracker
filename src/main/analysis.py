@@ -7,9 +7,11 @@ import jsonpickle
 from teamscale_client import TeamscaleClient
 
 from defintions import get_alert_file_name, get_project_dir
-from src.main.api import get_repository_summary, get_repository_commits, get_commit_alerts
-from src.main.data import CommitAlert, Commit, CommitAlertContext, TextRegionLocation
+from src.main.analysis_utils import is_file_affected_at_file_changes, are_left_lines_affected_at_diff
+from src.main.api import get_repository_summary, get_repository_commits, get_commit_alerts, get_affected_files, get_diff
+from src.main.data import CommitAlert, Commit, FileChange, DiffType, DiffDescription, TextRegionLocation
 from src.main.persistence import AlertFile
+from src.main.pretty_print import print_separator, print_highlighted
 
 
 def create_project_dir(project: str):
@@ -56,29 +58,30 @@ def update_filtered_alert_commits(client: TeamscaleClient):
         pass
 
 
-def analyse_one_alert_commit(client: TeamscaleClient, commit_timestamp: int):
-    alerts: dict[Commit, [CommitAlert]] = get_commit_alerts(client, commit_timestamp)
-    s = jsonpickle.encode(alerts)
+def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: int):
+    alerts: dict[Commit, [CommitAlert]] = get_commit_alerts(client, alert_commit_timestamp)
+    s = jsonpickle.encode(alerts, keys=True)
+    x = jsonpickle.decode(s, keys=True)
     parsed = json.loads(s)
     print(json.dumps(parsed, indent=4))
 
     alert_list: [CommitAlert] = []
-    for key in alerts.keys():
-        if key.type == Commit and key.timestamp == commit_timestamp:
+    for key in alerts.keys():  # search for key and read alert list
+        print("Timestamp : " + str(key.timestamp))
+        if type(key) == Commit and key.timestamp == alert_commit_timestamp:
             alert_list = alerts[key]
-            pass
+
+    # print repository summary
+    summary: tuple[int, int] = get_repository_summary(client)
+
     for i in alert_list:
         i: CommitAlert
-        ac: CommitAlertContext = i.context
-        old_clone_loc: TextRegionLocation = ac.old_clone_location
+        loc: TextRegionLocation = i.context.expected_clone_location
 
-        print(i)
-        pass
-
-        summary: tuple[int, int] = get_repository_summary(client)
-
+        print_separator()
+        print_highlighted("Analysing Alert: " + i.message)
         # start analysis
-        analysis_start: int = commit_timestamp
+        analysis_start: int = alert_commit_timestamp + 1
         analysis_step: int = 15555555_000  # milliseconds. 6 months
         commit_list: [Commit] = []
         while analysis_start < summary[1]:
@@ -86,14 +89,41 @@ def analyse_one_alert_commit(client: TeamscaleClient, commit_timestamp: int):
             if step > summary[1]:
                 step = summary[1]
             new_commits = get_repository_commits(client, analysis_start, step)
+            expected_file = i.context.expected_clone_location.uniform_path
+            expected_sibling = i.context.expected_sibling_location.uniform_path
             for commit in new_commits:
                 # Goal: In the end one want to say which category fits the file. three options
                 # so check diff
-                pass
+                affected_files: [FileChange] = get_affected_files(client, commit.timestamp)
+                b = (False, False)
+                if is_file_affected_at_file_changes(expected_file, affected_files):
+                    print("File affected at commit    : " + str(commit.timestamp))
+                    diff_description: DiffDescription = get_diff(client, DiffType.TOKEN_BASED, expected_file,
+                                                                 alert_commit_timestamp, expected_file,
+                                                                 commit.timestamp)
+                    if are_left_lines_affected_at_diff(loc.raw_start_line, loc.raw_end_line, diff_description):
+                        print_highlighted("File affected critical")
+                    else:
+                        print_highlighted("File is not affected critical")
+                    b = (True, False)
+                    pass
+                if is_file_affected_at_file_changes(expected_sibling, affected_files):
+                    print("Sibling affected at commit : " + str(commit.timestamp))
+                    diff_description: DiffDescription = get_diff(client, DiffType.TOKEN_BASED, expected_file,
+                                                                 alert_commit_timestamp, expected_file,
+                                                                 commit.timestamp)
+                    if are_left_lines_affected_at_diff(loc.raw_start_line, loc.raw_end_line, diff_description):
+                        print_highlighted("Sibling affected critical")
+                    else:
+                        print_highlighted("Sibling is not affected critical")
+                    b = (b[0], True)
+                if b == (True, True):
+                    print("-> Both affected")
+                elif b == (True, False) or b == (False, True):
+                    print("-> One affected")
             commit_list.extend(new_commits)
 
             analysis_start = step + 1
             pass
 
-    print(alerts.keys())
     pass

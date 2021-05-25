@@ -7,12 +7,12 @@ from teamscale_client.utils import auto_str
 
 @auto_str
 class Commit(object):
-    def __init__(self, branch: str, timestamp: int, type: str, parent_commits=None):
+    def __init__(self, branch: str, timestamp: int, commit_type: str, parent_commits=None):
         if parent_commits is None:
             parent_commits = []
         self.branch = branch
         self.timestamp = timestamp
-        self.type = type
+        self.commit_type = commit_type
         self.parent_commits = parent_commits
 
     @classmethod
@@ -29,7 +29,7 @@ class Commit(object):
             return True
         else:
             return self.branch == other.branch and self.timestamp == other.timestamp \
-                   and self.parent_commits == other.parent_commits and self.type == other.type
+                   and self.parent_commits == other.parent_commits and self.commit_type == other.commit_type
 
     def __hash__(self):
         return hash((self.branch, self.timestamp))
@@ -38,14 +38,14 @@ class Commit(object):
 @auto_str
 class TextRegionLocation(object):
     def __init__(self, location: str, raw_end_line: int, raw_end_offset: int, raw_start_line: int,
-                 raw_start_offset: int, type: str, uniform_path: str):
-        self.location = location
+                 raw_start_offset: int, location_type: str, uniform_path: str):
+        self.location = location  # file path
         self.raw_end_line = raw_end_line
         self.raw_end_offset = raw_end_offset
         self.raw_start_line = raw_start_line
         self.raw_start_offset = raw_start_offset
-        self.type = type
-        self.uniform_path = uniform_path
+        self.location_type = location_type  # TextRegionLocation ?
+        self.uniform_path = uniform_path  # also file path ?
 
     @classmethod
     def from_json(cls, json):
@@ -62,7 +62,7 @@ class TextRegionLocation(object):
         else:
             return self.location == other.location and self.raw_end_line == other.raw_end_line \
                    and self.raw_end_offset == other.raw_end_offset and self.raw_start_line == other.raw_start_line \
-                   and self.raw_start_offset == other.raw_start_offset and self.type == other.type \
+                   and self.raw_start_offset == other.raw_start_offset and self.location_type == other.location_type \
                    and self.uniform_path == other.uniform_path
 
 

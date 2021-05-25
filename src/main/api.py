@@ -42,7 +42,7 @@ def get_repository_commits(client: TeamscaleClient, start_commit_timestamp: int,
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
 
-    commit_list = [entry['commit'] for entry in parsed]
+    commit_list = [Commit.from_json(entry['commit']) for entry in parsed]
 
     return commit_list
 
@@ -75,42 +75,46 @@ def get_commit_alerts(client: TeamscaleClient, commit_timestamps: [int]) -> dict
     return commit_alert_list_dict
 
 
-def get_affected_files(client: TeamscaleClient, commit_timestamp: int) -> [FileChange]:
+def get_affected_files(client: TeamscaleClient, commit_timestamp: int, debug=False) -> [FileChange]:
     """
     get affected files for given commit timestamp.
     """
     url = get_project_api_service_url(client, "commits/affected-files")
     parameters = {"commit": commit_timestamp}
 
-    print_separator()
-    print_highlighted("Getting affected files for timestamp " + str(commit_timestamp) + " at URL: " + str(url))
+    if debug:
+        print_separator()
+        print_highlighted("Getting affected files for timestamp " + str(commit_timestamp) + " at URL: " + str(url))
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
-    print(json.dumps(parsed, indent=4, sort_keys=True))
+    if debug:
+        print(json.dumps(parsed, indent=4, sort_keys=True))
 
     affected_files: [FileChange] = [FileChange.from_json(j) for j in parsed]
 
     return affected_files
 
 
-def get_diff(client: TeamscaleClient, diff_type: DiffType, left: str, left_commit_timestamp: int, right: str,
-             right_commit_timestamp) -> DiffDescription:
-    """get a token based diff for two files and given timestamps"""
+def get_diff(client: TeamscaleClient, diff_type: DiffType, left_file: str, left_commit_timestamp: int, right_file: str,
+             right_commit_timestamp, debug=False) -> DiffDescription:
+    """get a diff for two files and given timestamps"""
     url = get_global_service_url(client, "api/compare-elements")
 
-    parameters = {"left": str(client.project) + "/" + left + "#@#" + str(left_commit_timestamp),
-                  "right": str(client.project) + "/" + right + "#@#" + str(right_commit_timestamp),
+    parameters = {"left": str(client.project) + "/" + left_file + "#@#" + str(left_commit_timestamp),
+                  "right": str(client.project) + "/" + right_file + "#@#" + str(right_commit_timestamp),
                   "normalized": False}
     # I currently do not understand, whether "normalized" should be true or not : line-based? when disabled?
 
-    print_separator()
-    print_highlighted("Getting diff for left: " + left + " at commit " + str(left_commit_timestamp))
-    print_highlighted("            and right: " + right + " at commit " + str(right_commit_timestamp))
+    if debug:
+        print_separator()
+        print_highlighted("Getting diff for left: " + left_file + " at commit " + str(left_commit_timestamp))
+        print_highlighted("            and right: " + right_file + " at commit " + str(right_commit_timestamp))
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
-    print(json.dumps(parsed, indent=4, sort_keys=True))
+    if debug:
+        print(json.dumps(parsed, indent=4, sort_keys=True))
 
     for e in parsed:
         d: DiffDescription = DiffDescription.from_json(e)

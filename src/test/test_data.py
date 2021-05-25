@@ -22,11 +22,11 @@ class TestCommit(unittest.TestCase):
         }
         commit: Commit = Commit.from_json(json)
         self.assertEqual(commit.branch, "main")
-        parent_should: Commit = Commit(branch="main", timestamp=1597694093000, type="simple")
+        parent_should: Commit = Commit(branch="main", timestamp=1597694093000, commit_type="simple")
         parent_actual: Commit = Commit.from_json(commit.parent_commits[0])
         self.assertEqual(parent_should, parent_actual)
         self.assertEqual(commit.timestamp, 1597731723000)
-        self.assertEqual(commit.type, "parented")
+        self.assertEqual(commit.commit_type, "parented")
 
 
 class TestTextRegionLocation(unittest.TestCase):
@@ -46,7 +46,7 @@ class TestTextRegionLocation(unittest.TestCase):
         self.assertEqual(text_region_location.raw_end_offset, 3309)
         self.assertEqual(text_region_location.raw_start_line, 26)
         self.assertEqual(text_region_location.raw_start_offset, 1065)
-        self.assertEqual(text_region_location.type, 'TextRegionLocation')
+        self.assertEqual(text_region_location.location_type, 'TextRegionLocation')
         self.assertEqual(text_region_location.uniform_path,
                          "src/main/java/org/jabref/logic/layout/format/HTMLChars.java")
 
