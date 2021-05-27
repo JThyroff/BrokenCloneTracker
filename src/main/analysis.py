@@ -11,9 +11,9 @@ from src.main.analysis_utils import is_file_affected_at_file_changes, are_left_l
 from src.main.api import get_repository_summary, get_repository_commits, get_commit_alerts, get_affected_files, get_diff
 from src.main.data import CommitAlert, Commit, FileChange, DiffType, DiffDescription, TextRegionLocation
 from src.main.persistence import AlertFile
-from src.main.pretty_print import MyLogger
+from src.main.pretty_print import MyLogger, LogLevel
 
-logger: MyLogger = MyLogger.get_logger()
+logger: MyLogger = MyLogger(LogLevel.VERBOSE)
 
 
 def create_project_dir(project: str):
@@ -21,6 +21,7 @@ def create_project_dir(project: str):
 
 
 def update_filtered_alert_commits(client: TeamscaleClient):
+    logger.print_highlighted("Updating filtered alert commits...", level=LogLevel.INFO)
     file_name: str = get_alert_file_name(client.project)
     # create structure if non-existent
     create_project_dir(project=client.project)
@@ -61,15 +62,16 @@ def update_filtered_alert_commits(client: TeamscaleClient):
 
 
 def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: int):
+    logger.print_highlighted("Analysing one alert commit...", level=LogLevel.INFO)
+    logger.print("Timestamp : " + str(alert_commit_timestamp), level=LogLevel.INFO)
     alerts: dict[Commit, [CommitAlert]] = get_commit_alerts(client, alert_commit_timestamp)
     s = jsonpickle.encode(alerts, keys=True)
     x = jsonpickle.decode(s, keys=True)
     parsed = json.loads(s)
-    print(json.dumps(parsed, indent=4))
+    logger.print(json.dumps(parsed, indent=4), level=LogLevel.DEBUG)
 
     alert_list: [CommitAlert] = []
     for key in alerts.keys():  # search for key and read alert list
-        print("Timestamp : " + str(key.timestamp))
         if type(key) == Commit and key.timestamp == alert_commit_timestamp:
             alert_list = alerts[key]
 
@@ -80,8 +82,8 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
         i: CommitAlert
         loc: TextRegionLocation = i.context.expected_clone_location
 
-        logger.print_separator()
-        logger.print_highlighted("Analysing Alert: " + i.message)
+        logger.print_separator(level=LogLevel.INFO)
+        logger.print_highlighted("Analysing Alert: " + i.message, LogLevel.VERBOSE)
         # start analysis
         analysis_start: int = alert_commit_timestamp + 1
         analysis_step: int = 15555555_000  # milliseconds. 6 months
@@ -99,30 +101,30 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                 affected_files: [FileChange] = get_affected_files(client, commit.timestamp)
                 b = (False, False)
                 if is_file_affected_at_file_changes(expected_file, affected_files):
-                    print("File affected at commit    : " + str(commit.timestamp))
+                    logger.print("File affected at commit    : " + str(commit.timestamp), level=LogLevel.VERBOSE)
                     diff_description: DiffDescription = get_diff(client, DiffType.TOKEN_BASED, expected_file,
                                                                  alert_commit_timestamp, expected_file,
                                                                  commit.timestamp)
                     if are_left_lines_affected_at_diff(loc.raw_start_line, loc.raw_end_line, diff_description):
-                        logger.print_highlighted("File affected critical")
+                        logger.print_highlighted("File affected critical", LogLevel.INFO)
                     else:
-                        logger.print_highlighted("File is not affected critical")
+                        logger.print_highlighted("File is not affected critical", LogLevel.INFO)
                     b = (True, False)
                     pass
                 if is_file_affected_at_file_changes(expected_sibling, affected_files):
-                    print("Sibling affected at commit : " + str(commit.timestamp))
+                    logger.print("Sibling affected at commit : " + str(commit.timestamp), level=LogLevel.VERBOSE)
                     diff_description: DiffDescription = get_diff(client, DiffType.TOKEN_BASED, expected_file,
                                                                  alert_commit_timestamp, expected_file,
                                                                  commit.timestamp)
                     if are_left_lines_affected_at_diff(loc.raw_start_line, loc.raw_end_line, diff_description):
-                        logger.print_highlighted("Sibling affected critical")
+                        logger.print_highlighted("Sibling affected critical", LogLevel.INFO)
                     else:
-                        logger.print_highlighted("Sibling is not affected critical")
+                        logger.print_highlighted("Sibling is not affected critical", LogLevel.INFO)
                     b = (b[0], True)
                 if b == (True, True):
-                    print("-> Both affected")
+                    logger.print("-> Both affected", LogLevel.INFO)
                 elif b == (True, False) or b == (False, True):
-                    print("-> One affected")
+                    logger.print("-> One affected", LogLevel.INFO)
             commit_list.extend(new_commits)
 
             analysis_start = step + 1

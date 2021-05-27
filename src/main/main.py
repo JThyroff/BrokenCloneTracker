@@ -7,7 +7,7 @@ from src.main.analysis import update_filtered_alert_commits, analyse_one_alert_c
 from src.main.analysis_utils import are_left_lines_affected_at_diff, is_file_affected_at_file_changes
 from src.main.api import get_diff, get_repository_commits, get_commit_alerts, get_affected_files, get_repository_summary
 from src.main.data import DiffType, Commit, DiffDescription
-from src.main.pretty_print import MyLogger, LogLevels
+from src.main.pretty_print import MyLogger, LogLevel
 
 TEAMSCALE_URL = "http://localhost:8080"
 
@@ -16,7 +16,7 @@ ACCESS_TOKEN = "ide-access-token"
 
 PROJECT_ID = "jabref"
 
-logger: MyLogger
+logger: MyLogger = MyLogger(LogLevel.INFO)
 
 
 def show_projects(client: TeamscaleClient) -> None:
@@ -87,15 +87,14 @@ def parse_args() -> None:
     if args.project_id:
         PROJECT_ID = args.project_id
 
-    logger.print_separator(level=LogLevels.RELEVANT)
-    logger.print_highlighted("Parsed Arguments:", level=LogLevels.RELEVANT)
-    logger.print("%s %s\n%s %s\n%s %s\n%s %s" % (
+    logger.print_separator(level=LogLevel.CRUCIAL)
+    logger.print_highlighted("Parsed Arguments:", level=LogLevel.CRUCIAL)
+    logger.print("\t%s %s\n\t\t\t%s %s\n\t\t\t%s %s\n\t\t\t%s %s" % (
         "Teamscale URL :", str(TEAMSCALE_URL), "Username :", str(USERNAME), "Access Token :", str(ACCESS_TOKEN),
-        "Project ID :", str(PROJECT_ID)), level=LogLevels.RELEVANT)
-    logger.print_separator(level=LogLevels.RELEVANT)
+        "Project ID :", str(PROJECT_ID)), level=LogLevel.CRUCIAL)
+    logger.print_separator(level=LogLevel.CRUCIAL)
 
 
 if __name__ == "__main__":
-    logger = MyLogger.get_logger()
     parse_args()
     main()

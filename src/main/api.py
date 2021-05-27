@@ -6,9 +6,9 @@ from teamscale_client import TeamscaleClient
 from defintions import JAVA_INT_MAX
 from src.main.api_utils import get_project_api_service_url, get_global_service_url
 from src.main.data import Commit, CommitAlert, FileChange, DiffDescription, DiffType
-from src.main.pretty_print import MyLogger, LogLevels
+from src.main.pretty_print import MyLogger, LogLevel
 
-logger: MyLogger = MyLogger.get_logger()
+logger: MyLogger = MyLogger(LogLevel.VERBOSE)
 
 
 def get_repository_commits(client: TeamscaleClient, start_commit_timestamp: int, end_commit_timestamp,
@@ -57,12 +57,13 @@ def get_commit_alerts(client: TeamscaleClient, commit_timestamps: [int]) -> dict
     url = get_project_api_service_url(client, "commit-alerts")
     parameters = {"commit": commit_timestamps}
 
-    logger.print_separator()
-    logger.print_highlighted("Getting commit alerts for timestamp " + str(commit_timestamps) + " at URL: " + str(url))
+    logger.print_separator(level=LogLevel.VERBOSE)
+    logger.print_highlighted("Getting commit alerts for timestamp " + str(commit_timestamps) + " at URL: " + str(url),
+                             level=LogLevel.VERBOSE)
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
-    print(json.dumps(parsed, indent=4, sort_keys=False))
+    logger.print(json.dumps(parsed, indent=4, sort_keys=False), level=LogLevel.DEBUG)
 
     commit_alert_list_dict: dict[Commit, [CommitAlert]] = dict()
 
@@ -84,15 +85,15 @@ def get_affected_files(client: TeamscaleClient, commit_timestamp: int) -> [FileC
     url = get_project_api_service_url(client, "commits/affected-files")
     parameters = {"commit": commit_timestamp}
 
-    logger.print_separator(level=LogLevels.VERBOSE)
+    logger.print_separator(level=LogLevel.DEBUG)
     logger.print_highlighted(
         "Getting affected files for timestamp " + str(commit_timestamp) + " at URL: " + str(url),
-        level=LogLevels.VERBOSE)
+        level=LogLevel.DEBUG)
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
 
-    logger.print(json.dumps(parsed, indent=4, sort_keys=True), level=LogLevels.VERBOSE)
+    logger.print(json.dumps(parsed, indent=4, sort_keys=True), level=LogLevel.DEBUG)
 
     affected_files: [FileChange] = [FileChange.from_json(j) for j in parsed]
 
@@ -100,7 +101,7 @@ def get_affected_files(client: TeamscaleClient, commit_timestamp: int) -> [FileC
 
 
 def get_diff(client: TeamscaleClient, diff_type: DiffType, left_file: str, left_commit_timestamp: int, right_file: str,
-             right_commit_timestamp, debug=False) -> DiffDescription:
+             right_commit_timestamp) -> DiffDescription:
     """get a diff for two files and given timestamps"""
     url = get_global_service_url(client, "api/compare-elements")
 
@@ -109,15 +110,15 @@ def get_diff(client: TeamscaleClient, diff_type: DiffType, left_file: str, left_
                   "normalized": False}
     # I currently do not understand, whether "normalized" should be true or not : line-based? when disabled?
 
-    if debug:
-        logger.print_separator()
-        logger.print_highlighted("Getting diff for left: " + left_file + " at commit " + str(left_commit_timestamp))
-        logger.print_highlighted("            and right: " + right_file + " at commit " + str(right_commit_timestamp))
+    logger.print("Getting diff for left: " + left_file + " at commit " + str(left_commit_timestamp),
+                 level=LogLevel.VERBOSE)
+    logger.print("            and right: " + right_file + " at commit " + str(right_commit_timestamp),
+                 level=LogLevel.VERBOSE)
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
-    if debug:
-        print(json.dumps(parsed, indent=4, sort_keys=True))
+
+    logger.print(json.dumps(parsed, indent=4, sort_keys=True), level=LogLevel.DEBUG)
 
     for e in parsed:
         d: DiffDescription = DiffDescription.from_json(e)
@@ -133,5 +134,5 @@ def get_repository_summary(client: TeamscaleClient) -> tuple[int, int]:
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
-    print(json.dumps(parsed, indent=4, sort_keys=True))
+    logger.print(json.dumps(parsed, indent=4, sort_keys=True), level=LogLevel.VERBOSE)
     return parsed['firstCommit'], parsed['mostRecentCommit']
