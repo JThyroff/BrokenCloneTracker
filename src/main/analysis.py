@@ -11,7 +11,9 @@ from src.main.analysis_utils import is_file_affected_at_file_changes, are_left_l
 from src.main.api import get_repository_summary, get_repository_commits, get_commit_alerts, get_affected_files, get_diff
 from src.main.data import CommitAlert, Commit, FileChange, DiffType, DiffDescription, TextRegionLocation
 from src.main.persistence import AlertFile
-from src.main.pretty_print import print_separator, print_highlighted
+from src.main.pretty_print import MyLogger
+
+logger: MyLogger = MyLogger.get_logger()
 
 
 def create_project_dir(project: str):
@@ -78,8 +80,8 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
         i: CommitAlert
         loc: TextRegionLocation = i.context.expected_clone_location
 
-        print_separator()
-        print_highlighted("Analysing Alert: " + i.message)
+        logger.print_separator()
+        logger.print_highlighted("Analysing Alert: " + i.message)
         # start analysis
         analysis_start: int = alert_commit_timestamp + 1
         analysis_step: int = 15555555_000  # milliseconds. 6 months
@@ -102,9 +104,9 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                                                                  alert_commit_timestamp, expected_file,
                                                                  commit.timestamp)
                     if are_left_lines_affected_at_diff(loc.raw_start_line, loc.raw_end_line, diff_description):
-                        print_highlighted("File affected critical")
+                        logger.print_highlighted("File affected critical")
                     else:
-                        print_highlighted("File is not affected critical")
+                        logger.print_highlighted("File is not affected critical")
                     b = (True, False)
                     pass
                 if is_file_affected_at_file_changes(expected_sibling, affected_files):
@@ -113,9 +115,9 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                                                                  alert_commit_timestamp, expected_file,
                                                                  commit.timestamp)
                     if are_left_lines_affected_at_diff(loc.raw_start_line, loc.raw_end_line, diff_description):
-                        print_highlighted("Sibling affected critical")
+                        logger.print_highlighted("Sibling affected critical")
                     else:
-                        print_highlighted("Sibling is not affected critical")
+                        logger.print_highlighted("Sibling is not affected critical")
                     b = (b[0], True)
                 if b == (True, True):
                     print("-> Both affected")

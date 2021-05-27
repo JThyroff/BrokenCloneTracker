@@ -6,7 +6,9 @@ from teamscale_client import TeamscaleClient
 from defintions import JAVA_INT_MAX
 from src.main.api_utils import get_project_api_service_url, get_global_service_url
 from src.main.data import Commit, CommitAlert, FileChange, DiffDescription, DiffType
-from src.main.pretty_print import print_separator, print_highlighted
+from src.main.pretty_print import MyLogger, LogLevels
+
+logger: MyLogger = MyLogger.get_logger()
 
 
 def get_repository_commits(client: TeamscaleClient, start_commit_timestamp: int, end_commit_timestamp,
@@ -55,8 +57,8 @@ def get_commit_alerts(client: TeamscaleClient, commit_timestamps: [int]) -> dict
     url = get_project_api_service_url(client, "commit-alerts")
     parameters = {"commit": commit_timestamps}
 
-    print_separator()
-    print_highlighted("Getting commit alerts for timestamp " + str(commit_timestamps) + " at URL: " + str(url))
+    logger.print_separator()
+    logger.print_highlighted("Getting commit alerts for timestamp " + str(commit_timestamps) + " at URL: " + str(url))
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
@@ -75,21 +77,22 @@ def get_commit_alerts(client: TeamscaleClient, commit_timestamps: [int]) -> dict
     return commit_alert_list_dict
 
 
-def get_affected_files(client: TeamscaleClient, commit_timestamp: int, debug=False) -> [FileChange]:
+def get_affected_files(client: TeamscaleClient, commit_timestamp: int) -> [FileChange]:
     """
     get affected files for given commit timestamp.
     """
     url = get_project_api_service_url(client, "commits/affected-files")
     parameters = {"commit": commit_timestamp}
 
-    if debug:
-        print_separator()
-        print_highlighted("Getting affected files for timestamp " + str(commit_timestamp) + " at URL: " + str(url))
+    logger.print_separator(level=LogLevels.VERBOSE)
+    logger.print_highlighted(
+        "Getting affected files for timestamp " + str(commit_timestamp) + " at URL: " + str(url),
+        level=LogLevels.VERBOSE)
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
-    if debug:
-        print(json.dumps(parsed, indent=4, sort_keys=True))
+
+    logger.print(json.dumps(parsed, indent=4, sort_keys=True), level=LogLevels.VERBOSE)
 
     affected_files: [FileChange] = [FileChange.from_json(j) for j in parsed]
 
@@ -107,9 +110,9 @@ def get_diff(client: TeamscaleClient, diff_type: DiffType, left_file: str, left_
     # I currently do not understand, whether "normalized" should be true or not : line-based? when disabled?
 
     if debug:
-        print_separator()
-        print_highlighted("Getting diff for left: " + left_file + " at commit " + str(left_commit_timestamp))
-        print_highlighted("            and right: " + right_file + " at commit " + str(right_commit_timestamp))
+        logger.print_separator()
+        logger.print_highlighted("Getting diff for left: " + left_file + " at commit " + str(left_commit_timestamp))
+        logger.print_highlighted("            and right: " + right_file + " at commit " + str(right_commit_timestamp))
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
