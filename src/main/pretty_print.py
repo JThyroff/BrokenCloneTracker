@@ -30,14 +30,18 @@ class MyLogger:
     def __init__(self, level: LogLevel):
         self.LOG_LEVEL = level
 
-    def print_separator(self, level: LogLevel = LogLevel.NONE):
+    def separator(self, level: LogLevel = LogLevel.NONE):
         if level.compare(self.LOG_LEVEL):
             print(get_current_time() + SEPARATOR)
 
-    def print_highlighted(self, text: str, level: LogLevel = LogLevel.NONE):
+    def yellow(self, text: str, level: LogLevel = LogLevel.NONE):
         if level.compare(self.LOG_LEVEL):
             print(get_current_time() + Fore.YELLOW + Style.DIM + text + Style.RESET_ALL)
 
-    def print(self, text: str, level: LogLevel = LogLevel.NONE):
+    def white(self, text: str, level: LogLevel = LogLevel.NONE):
         if level.compare(self.LOG_LEVEL):
             print(get_current_time() + Style.RESET_ALL + text)
+
+    def link(self, text: str, level: LogLevel.NONE):
+        if level.compare(self.LOG_LEVEL):
+            print(get_current_time() + Fore.BLUE + Style.DIM + text + Style.RESET_ALL)

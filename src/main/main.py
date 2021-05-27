@@ -24,8 +24,8 @@ def show_projects(client: TeamscaleClient) -> None:
     print the projects to console
     :param client: the teamscale client
     """
-    logger.print_separator()
-    logger.print_highlighted("List of available Projects: ")
+    logger.separator()
+    logger.yellow("List of available Projects: ")
 
     projects = client.get_projects()
     for project in projects:
@@ -87,12 +87,12 @@ def parse_args() -> None:
     if args.project_id:
         PROJECT_ID = args.project_id
 
-    logger.print_separator(level=LogLevel.CRUCIAL)
-    logger.print_highlighted("Parsed Arguments:", level=LogLevel.CRUCIAL)
-    logger.print("\t%s %s\n\t\t\t%s %s\n\t\t\t%s %s\n\t\t\t%s %s" % (
+    logger.separator(level=LogLevel.CRUCIAL)
+    logger.yellow("Parsed Arguments:", level=LogLevel.CRUCIAL)
+    logger.white("\t%s %s\n\t\t\t%s %s\n\t\t\t%s %s\n\t\t\t%s %s" % (
         "Teamscale URL :", str(TEAMSCALE_URL), "Username :", str(USERNAME), "Access Token :", str(ACCESS_TOKEN),
         "Project ID :", str(PROJECT_ID)), level=LogLevel.CRUCIAL)
-    logger.print_separator(level=LogLevel.CRUCIAL)
+    logger.separator(level=LogLevel.CRUCIAL)
 
 
 if __name__ == "__main__":

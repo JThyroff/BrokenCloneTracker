@@ -141,6 +141,10 @@ class DiffType(Enum):
     LINE_BASED = "line-based"
     LINE_BASED_IGNORE_WHITESPACE = "line-based (ignore whitespace)"
 
+    @classmethod
+    def from_json(cls, json):
+        return DiffType[json.upper().replace("-", "_").replace("(", "").replace(")", "").replace(" ", "_")]
+
 
 def list_to_interval_list(int_list: [int]) -> [Interval]:
     """Takes an int list and converts every two ints to an interval"""
@@ -169,10 +173,12 @@ class DiffDescription:
         self.right_change_line_intervals = list_to_interval_list(right_change_lines)
         self.left_change_region_intervals = list_to_interval_list(left_change_regions)
         self.right_change_region_intervals = list_to_interval_list(right_change_regions)
+        assert len(self.left_change_line_intervals) == len(self.right_change_line_intervals)
+        # assert len(self.left_change_region_intervals) == len(self.right_change_region_intervals)
 
     @classmethod
     def from_json(cls, json):
-        return DiffDescription(json['name'], json['leftChangeLines'], json['leftChangeRegions'],
+        return DiffDescription(DiffType.from_json(json['name']), json['leftChangeLines'], json['leftChangeRegions'],
                                json["rightChangeLines"],
                                json["rightChangeRegions"])
 
