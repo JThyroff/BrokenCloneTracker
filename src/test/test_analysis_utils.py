@@ -138,11 +138,26 @@ class TestAnalysisUtils(unittest.TestCase):
         raw_start_line = 5
         raw_end_line = 20
         raw_start_line, raw_end_line = correct_lines(raw_start_line, raw_end_line, diff_desc)
+        # no change
         self.assertEqual(5, raw_start_line)
         self.assertEqual(20, raw_end_line)
 
         raw_start_line = 26
         raw_end_line = 27
         raw_start_line, raw_end_line = correct_lines(raw_start_line, raw_end_line, diff_desc)
+        # -1
         self.assertEqual(25, raw_start_line)
+        self.assertEqual(26, raw_end_line)
+
+        raw_start_line = 111
+        raw_end_line = 129
+        raw_start_line, raw_end_line = correct_lines(raw_start_line, raw_end_line, diff_desc)
+        # -2
+        self.assertEqual(109, raw_start_line)
+        self.assertEqual(127, raw_end_line)
+
+        raw_start_line = 5
+        raw_end_line = 27
+        raw_start_line, raw_end_line = correct_lines(raw_start_line, raw_end_line, diff_desc)
+        self.assertEqual(5, raw_start_line)
         self.assertEqual(26, raw_end_line)

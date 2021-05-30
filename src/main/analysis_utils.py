@@ -26,6 +26,11 @@ def get_interval_length(interval: Interval) -> int:
 
 
 def correct_lines(loc_start_line: int, loc_end_line: int, diff_desc: DiffDescription):
+    """ While tracking the relevant region of a broken clone by its affected lines, it could be the case
+    that the relevant lines of one instance of the code clone are shifted due to code modifications in the lines
+    above. This function addresses this issue and corrects the given line numbers respecting the diff.
+    It basically adds the diff of the lines above the relevant part to its line numbers.
+    :return the corrected line number respecting the diff"""
     if "line-based" not in diff_desc.name.value:
         raise ValueError('DiffDescription should be a kind of line based diff.')
     loc_interval: Interval = portion.closedopen(loc_start_line, loc_end_line)

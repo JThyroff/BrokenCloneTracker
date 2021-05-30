@@ -63,7 +63,7 @@ def get_commit_alerts(client: TeamscaleClient, commit_timestamps: [int]) -> dict
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
-    logger.white(json.dumps(parsed, indent=4, sort_keys=False), level=LogLevel.DEBUG)
+    logger.white(json.dumps(parsed, indent=4, sort_keys=False), level=LogLevel.DUMP)
 
     commit_alert_list_dict: dict[Commit, [CommitAlert]] = dict()
 
@@ -93,14 +93,14 @@ def get_affected_files(client: TeamscaleClient, commit_timestamp: int) -> [FileC
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
 
-    logger.white(json.dumps(parsed, indent=4, sort_keys=True), level=LogLevel.DEBUG)
+    logger.white(json.dumps(parsed, indent=4, sort_keys=True), level=LogLevel.DUMP)
 
     affected_files: [FileChange] = [FileChange.from_json(j) for j in parsed]
 
     return affected_files
 
 
-def get_diff(client: TeamscaleClient, diff_type: DiffType, left_file: str, left_commit_timestamp: int, right_file: str,
+def get_diff(client: TeamscaleClient, left_file: str, left_commit_timestamp: int, right_file: str,
              right_commit_timestamp) -> dict[DiffType: DiffDescription]:
     """get a diff for two files and given timestamps"""
     url = get_global_service_url(client, "api/compare-elements")
@@ -121,7 +121,7 @@ def get_diff(client: TeamscaleClient, diff_type: DiffType, left_file: str, left_
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
 
-    logger.white(json.dumps(parsed, indent=4, sort_keys=True), level=LogLevel.DEBUG)
+    logger.white(json.dumps(parsed, indent=4, sort_keys=True), level=LogLevel.DUMP)
 
     diff_dict = {}
 

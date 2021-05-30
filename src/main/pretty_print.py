@@ -7,6 +7,7 @@ SEPARATOR = Fore.LIGHTBLACK_EX + Style.DIM + "∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇�
 
 
 class LogLevel(enum.Enum):
+    DUMP = 5
     DEBUG = 4
     VERBOSE = 3
     INFO = 2
