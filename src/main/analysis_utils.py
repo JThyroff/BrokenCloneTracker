@@ -40,17 +40,20 @@ def correct_lines(loc_start_line: int, loc_end_line: int, diff_desc: DiffDescrip
         right_length = get_interval_length(diff_desc.right_change_line_intervals[i])
         # [4,6) -> [4,5)
         x = right_length - left_length
-        if diff_desc.right_change_line_intervals[i] < loc_interval:
+        if diff_desc.left_change_line_intervals[i] < loc_interval:
             # need to adjust the lines
             loc_start_line = loc_start_line + x
             loc_end_line = loc_end_line + x
-        elif diff_desc.right_change_line_intervals[i] in loc_interval:
+        elif diff_desc.left_change_line_intervals[i] in loc_interval:
             # apply change only to end line as start line stays unaffected
             loc_end_line = loc_end_line + x
-        elif diff_desc.right_change_line_intervals[i] > loc_interval:
-            # do nothing
-            pass
-        elif diff_desc.right_change_line_intervals[i].overlaps(loc_interval):
+        elif diff_desc.left_change_line_intervals[i] > loc_interval:
+            # return cause intervals are sorted -> No important intervals will follow
+            return loc_start_line, loc_end_line
+        elif diff_desc.left_change_line_intervals[i] <= loc_interval:
+            loc_end_line = loc_end_line + x
+        elif diff_desc.left_change_line_intervals[i] >= loc_interval:
+            # loc_start_line = loc_start_line + x
             raise NotImplementedError("I currently do not know how to handle this special case")
         i = i + 1
 

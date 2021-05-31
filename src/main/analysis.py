@@ -17,10 +17,13 @@ logger: MyLogger = MyLogger(LogLevel.DEBUG)
 
 
 def create_project_dir(project: str):
+    """Creates the directory where the project specific files are saved. For example the """
     Path(get_project_dir(project)).mkdir(parents=True, exist_ok=True)
 
 
 def update_filtered_alert_commits(client: TeamscaleClient):
+    """This function updates the alert commit of the project in the corresponding file.
+    It reads the current alert file and compares appends new relevant commits from the server."""
     logger.yellow("Updating filtered alert commits...", level=LogLevel.INFO)
     file_name: str = get_alert_file_name(client.project)
     # create structure if non-existent
@@ -62,6 +65,8 @@ def update_filtered_alert_commits(client: TeamscaleClient):
 
 
 def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: int):
+    """Analyzes one given alert commit. This function scans all commits after the given timestamp for relevant changes
+    in the code base."""
     logger.yellow("Analysing one alert commit...", level=LogLevel.INFO)
     logger.white("Timestamp : " + str(alert_commit_timestamp), level=LogLevel.INFO)
 
@@ -128,7 +133,7 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                                                                           commit.timestamp)
                     clone_start_line, clone_end_line = correct_lines(clone_start_line, clone_end_line,
                                                                      diff_dict.get(
-                                                                         DiffType.LINE_BASED_IGNORE_WHITESPACE))
+                                                                         DiffType.LINE_BASED))
                     if are_left_lines_affected_at_diff(clone_start_line, clone_end_line,
                                                        diff_dict.get(DiffType.TOKEN_BASED)):
                         logger.yellow("File affected critical", LogLevel.INFO)
@@ -142,7 +147,7 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                                                                           commit.timestamp)
                     sibling_start_line, sibling_end_line = correct_lines(sibling_start_line, sibling_end_line,
                                                                          diff_dict.get(
-                                                                             DiffType.LINE_BASED_IGNORE_WHITESPACE))
+                                                                             DiffType.LINE_BASED))
                     if are_left_lines_affected_at_diff(sibling_start_line, sibling_end_line,
                                                        diff_dict.get(DiffType.TOKEN_BASED)):
                         logger.yellow("Sibling affected critical", LogLevel.INFO)
@@ -158,6 +163,7 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
 
             analysis_start = step + 1
             pass
+        # region logging
         logger.separator(level=LogLevel.DEBUG)
         logger.white("Corrected lines:", level=LogLevel.DEBUG)
         logger.white("Expected clone location: " + str(i.context.expected_clone_location.uniform_path),
@@ -168,4 +174,5 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                      level=LogLevel.DEBUG)
         logger.white("Sibling.start_line (corrected): " + str(sibling_start_line), level=LogLevel.DEBUG)
         logger.white("Sibling.end_line (corrected): " + str(sibling_end_line), level=LogLevel.DEBUG)
+        # endregion
     pass
