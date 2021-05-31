@@ -2,6 +2,7 @@ from enum import Enum
 
 import portion
 from portion import Interval
+from teamscale_client import TeamscaleClient
 from teamscale_client.utils import auto_str
 
 
@@ -242,6 +243,9 @@ class CloneFinding:
             to_return += "Sibling: " + str(sibling) + "\n"
         return to_return[:-1] + "}"
 
+    def get_finding_link(self, client: TeamscaleClient):
+        return client.url + "/findings.html#details/" + client.project + "/?id=" + self.finding_id
+
     @classmethod
     def from_json(cls, json):
         sibling_locations = []
@@ -305,6 +309,17 @@ class CloneFindingChurn:
         if self.is_empty():
             to_return = to_return[:-1] + " NO  CHURN"
         return to_return
+
+    def get_finding_links(self, client: TeamscaleClient) -> [str]:
+        """returns a list of weblinks to the findings"""
+        joined = self.added_findings + self.findings_added_in_branch + self.findings_in_changed_code + \
+                 self.removed_findings + \
+                 self.findings_removed_in_branch
+        links: [str] = []
+        for clone_finding in joined:
+            clone_finding: CloneFinding
+            links.append(clone_finding.get_finding_link(client))
+        return links
 
     def is_empty(self):
         return not (self.added_findings or self.findings_added_in_branch or self.findings_in_changed_code

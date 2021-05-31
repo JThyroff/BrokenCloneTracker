@@ -7,9 +7,10 @@ import jsonpickle
 from teamscale_client import TeamscaleClient
 
 from defintions import get_alert_file_name, get_project_dir
-from src.main.analysis_utils import is_file_affected_at_file_changes, are_left_lines_affected_at_diff, correct_lines, \
+from src.main.analysis.analysis_utils import is_file_affected_at_file_changes, are_left_lines_affected_at_diff, \
+    correct_lines, \
     filter_clone_finding_churn_by_file
-from src.main.api import get_repository_summary, get_repository_commits, get_commit_alerts, get_affected_files, \
+from src.main.api.api import get_repository_summary, get_repository_commits, get_commit_alerts, get_affected_files, \
     get_diff, get_clone_finding_churn
 from src.main.data import CommitAlert, Commit, FileChange, DiffType, DiffDescription, TextRegionLocation, \
     CloneFindingChurn
@@ -160,11 +161,13 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                         logger.white("Sibling is not affected critical", LogLevel.DEBUG)
                     b = (b[0], True)
                 # get clone finding churn for commit: filter for clones where both files are affected
-                # TODO debug and test this. Print maybe link to Finding
+                # TODO debug and test this. Print maybe link to Findings
                 clone_finding_churn: CloneFindingChurn = get_clone_finding_churn(client, commit.timestamp)
                 filter_clone_finding_churn_by_file([expected_file, expected_sibling], clone_finding_churn)
                 if not clone_finding_churn.is_empty():
                     logger.yellow(str(clone_finding_churn), level=LogLevel.VERBOSE)
+                    for s in clone_finding_churn.get_finding_links(client):
+                        logger.blue(s, level=LogLevel.VERBOSE)
 
                 if b == (True, True):
                     logger.white("-> Both affected", LogLevel.VERBOSE)

@@ -3,7 +3,7 @@ import unittest
 import portion
 from portion import Interval
 
-from src.main.analysis_utils import is_file_affected_at_file_changes, are_left_lines_affected_at_diff, \
+from src.main.analysis.analysis_utils import is_file_affected_at_file_changes, are_left_lines_affected_at_diff, \
     get_interval_length, correct_lines
 from src.main.data import FileChange, DiffDescription
 

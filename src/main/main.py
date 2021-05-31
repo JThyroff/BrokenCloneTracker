@@ -1,21 +1,10 @@
-import argparse
-
 from teamscale_client import TeamscaleClient
-from teamscale_client.teamscale_client_config import TeamscaleClientConfig
 
-from src.main.analysis import update_filtered_alert_commits, analyse_one_alert_commit
-from src.main.analysis_utils import are_left_lines_affected_at_diff, is_file_affected_at_file_changes
-from src.main.api import get_diff, get_repository_commits, get_commit_alerts, get_affected_files, \
-    get_repository_summary, get_clone_finding_churn
+from src.main.analysis.analysis import analyse_one_alert_commit
+from src.main.analysis.analysis_utils import are_left_lines_affected_at_diff, is_file_affected_at_file_changes
 from src.main.data import DiffType, Commit, DiffDescription
+from src.main.persistence import parse_args
 from src.main.pretty_print import MyLogger, LogLevel
-
-TEAMSCALE_URL = "http://localhost:8080"
-
-USERNAME = "admin"
-ACCESS_TOKEN = "ide-access-token"
-
-PROJECT_ID = "jabref"
 
 logger: MyLogger = MyLogger(LogLevel.INFO)
 
@@ -33,8 +22,7 @@ def show_projects(client: TeamscaleClient) -> None:
     logger.separator()
 
 
-def main() -> None:
-    client = TeamscaleClient(TEAMSCALE_URL, USERNAME, ACCESS_TOKEN, PROJECT_ID)
+def main(client: TeamscaleClient) -> None:
     client.check_api_version()
     analyse_one_alert_commit(client, 1521580769000)
 
@@ -57,47 +45,6 @@ def main() -> None:
     print(str(are_left_lines_affected_at_diff(93, 105, d)))
 
 
-def parse_args() -> None:
-    global TEAMSCALE_URL
-    global USERNAME
-    global ACCESS_TOKEN
-    global PROJECT_ID
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--teamscale_client_config",
-                        help="provide a teamscale client config file. "
-                             "https://github.com/cqse/teamscale-client-python/blob/master/examples/.teamscale-client"
-                             ".config")
-    parser.add_argument("--teamscale_url", help="provide a teamscale URL other than default: " + TEAMSCALE_URL)
-    parser.add_argument("--username", help="provide a username other than default: " + USERNAME)
-    parser.add_argument("--access_token", help="provide a access_token other than default: " + ACCESS_TOKEN)
-    parser.add_argument("--project_id", help="provide a project_id other than default: " + PROJECT_ID)
-
-    args = parser.parse_args()
-
-    if args.teamscale_client_config:
-        config: TeamscaleClientConfig = TeamscaleClientConfig.from_config_file(args.teamscale_client_config)
-        TEAMSCALE_URL = config.url
-        USERNAME = config.username
-        ACCESS_TOKEN = config.access_token
-        PROJECT_ID = config.project_id
-    if args.teamscale_url:
-        TEAMSCALE_URL = args.teamscale_url
-    if args.username:
-        USERNAME = args.username
-    if args.access_token:
-        ACCESS_TOKEN = args.access_token
-    if args.project_id:
-        PROJECT_ID = args.project_id
-
-    logger.separator(level=LogLevel.CRUCIAL)
-    logger.yellow("Parsed Arguments:", level=LogLevel.CRUCIAL)
-    logger.white("\t%s %s\n\t\t\t%s %s\n\t\t\t%s %s\n\t\t\t%s %s" % (
-        "Teamscale URL :", str(TEAMSCALE_URL), "Username :", str(USERNAME), "Access Token :", str(ACCESS_TOKEN),
-        "Project ID :", str(PROJECT_ID)), level=LogLevel.CRUCIAL)
-    logger.separator(level=LogLevel.CRUCIAL)
-
-
 if __name__ == "__main__":
-    parse_args()
-    main()
+    teamscale_client = parse_args()
+    main(teamscale_client)

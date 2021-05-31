@@ -4,7 +4,7 @@ import requests
 from teamscale_client import TeamscaleClient
 
 from defintions import JAVA_INT_MAX
-from src.main.api_utils import get_project_api_service_url, get_global_service_url
+from src.main.api.api_utils import get_project_api_service_url, get_global_service_url
 from src.main.data import Commit, CommitAlert, FileChange, DiffDescription, DiffType, CloneFindingChurn
 from src.main.pretty_print import MyLogger, LogLevel
 
@@ -115,7 +115,7 @@ def get_diff(client: TeamscaleClient, left_file: str, left_commit_timestamp: int
                  level=LogLevel.DEBUG)
     logger.white("            and right: " + right_file + " at commit " + str(right_commit_timestamp),
                  level=LogLevel.DEBUG)
-    link = "http://localhost:8080/compare.html#/" + left + "#&#" + right
+    link = client.url + "/compare.html#/" + left + "#&#" + right
     logger.blue(link, level=LogLevel.VERBOSE)
 
     response: requests.Response = client.get(url, parameters)
