@@ -1,11 +1,11 @@
 import portion
 from portion import Interval
 
-from src.main.data import FileChange, DiffDescription
+from src.main.data import FileChange, DiffDescription, CloneFindingChurn, CloneFinding
 
 
-def is_file_affected_at_file_changes(file: str, affected_files: [FileChange]) -> bool:
-    return file in [e.uniform_path for e in affected_files]
+def is_file_affected_at_file_changes(file_uniform_path: str, affected_files: [FileChange]) -> bool:
+    return file_uniform_path in [e.uniform_path for e in affected_files]
 
 
 def are_left_lines_affected_at_diff(raw_start_line: int, raw_end_line: int, diff_desc: DiffDescription) -> bool:
@@ -17,6 +17,31 @@ def are_left_lines_affected_at_diff(raw_start_line: int, raw_end_line: int, diff
             return True
 
     return False
+
+
+def filter_clone_finding_churn_by_file(file_uniform_path: str,
+                                       clone_finding_churn: CloneFindingChurn) -> CloneFindingChurn:
+    """filter a clone finding churn by file. All findings will be reduced to the one where the file is affected"""
+
+    def file_filter(x: CloneFinding) -> bool:
+        return x.location.uniform_path == file_uniform_path \
+               or file_uniform_path in [e.uniform_path for e in x.sibling_locations]
+
+    clone_finding_churn.added_findings = list(filter(lambda x: file_filter(x), clone_finding_churn.added_findings))
+    clone_finding_churn.findings_added_in_branch = list(
+        filter(lambda x: file_filter(x), clone_finding_churn.findings_added_in_branch))
+    clone_finding_churn.findings_in_changed_code = list(
+        filter(lambda x: file_filter(x), clone_finding_churn.findings_in_changed_code))
+    clone_finding_churn.removed_findings = list(filter(lambda x: file_filter(x), clone_finding_churn.removed_findings))
+    clone_finding_churn.findings_removed_in_branch = list(filter(lambda x: file_filter(x),
+                                                                 clone_finding_churn.findings_removed_in_branch))
+    return clone_finding_churn
+
+
+def is_file_affected_at_clone_finding_churn(file_uniform_path: str, clone_finding_churn: CloneFindingChurn) -> bool:
+    """returns whether given file is affected by given CloneFindingChurn."""
+    clone_finding_churn = filter_clone_finding_churn_by_file(file_uniform_path, clone_finding_churn)
+    return not clone_finding_churn.is_empty()
 
 
 def get_interval_length(interval: Interval) -> int:

@@ -43,6 +43,10 @@ class MyLogger:
         if level.compare(self.LOG_LEVEL):
             print(get_current_time() + Style.RESET_ALL + text)
 
-    def link(self, text: str, level: LogLevel.NONE):
+    def blue(self, text: str, level: LogLevel.NONE):
         if level.compare(self.LOG_LEVEL):
             print(get_current_time() + Fore.BLUE + Style.DIM + text + Style.RESET_ALL)
+
+    def red(self, text: str, level: LogLevel.NONE):
+        if level.compare(self.LOG_LEVEL):
+            print(get_current_time() + Fore.RED + Style.DIM + text + Style.RESET_ALL)

@@ -35,7 +35,6 @@ class Commit(object):
         return hash((self.branch, self.timestamp))
 
 
-@auto_str
 class TextRegionLocation(object):
     def __init__(self, location: str, raw_end_line: int, raw_end_offset: int, raw_start_line: int,
                  raw_start_offset: int, location_type: str, uniform_path: str):
@@ -46,6 +45,9 @@ class TextRegionLocation(object):
         self.raw_start_offset = raw_start_offset
         self.location_type = location_type  # TextRegionLocation ?
         self.uniform_path = uniform_path  # also file path ?
+
+    def __str__(self):
+        return "Location: " + self.uniform_path + " [" + str(self.raw_start_line) + "-" + str(self.raw_end_line) + "]"
 
     @classmethod
     def from_json(cls, json):
@@ -215,7 +217,6 @@ class CloneProperties:
             return self.instances == other.instances and self.length == other.length and self.gaps == other.gaps
 
 
-@auto_str
 class CloneFinding:
     def __init__(self, group_name: str, category_name: str, message: str, location: TextRegionLocation,
                  finding_id: str, birth_commit: Commit, death_commit: Commit, assessment: str,
@@ -233,6 +234,13 @@ class CloneFinding:
         self.properties = properties
         self.analysis_timestamp = analysis_timestamp
         self.type_id = type_id
+
+    def __str__(self):
+        to_return: str = "{ Clone Finding: " + str(self.location) + "\n"
+        for sibling in self.sibling_locations:
+            sibling: TextRegionLocation
+            to_return += "Sibling: " + str(sibling) + "\n"
+        return to_return[:-1] + "}"
 
     @classmethod
     def from_json(cls, json):
@@ -266,7 +274,6 @@ class CloneFinding:
                    and self.type_id == other.type_id
 
 
-@auto_str
 class CloneFindingChurn:
     def __init__(self, commit: Commit, added_findings: [CloneFinding], findings_added_in_branch: [CloneFinding],
                  findings_in_changed_code: [CloneFinding], removed_findings: [CloneFinding],
@@ -277,6 +284,31 @@ class CloneFindingChurn:
         self.findings_in_changed_code = findings_in_changed_code
         self.removed_findings = removed_findings
         self.findings_removed_in_branch = findings_removed_in_branch
+
+    def __str__(self):
+        to_return = "Clone Finding Churn for commit: " + str(self.commit.timestamp) + "\n"
+        if self.added_findings:
+            to_return += "added findings = "
+            to_return += ',\n'.join(map(str, self.added_findings))
+        if self.findings_added_in_branch:
+            to_return += "findings added in branch = "
+            to_return += ', '.join(map(str, self.findings_added_in_branch))
+        if self.findings_in_changed_code:
+            to_return += "findings in changed code = "
+            to_return += ',\n'.join(map(str, self.findings_in_changed_code))
+        if self.removed_findings:
+            to_return += "removed findings = "
+            to_return += ',\n'.join(map(str, self.removed_findings))
+        if self.findings_removed_in_branch:
+            to_return += "findings removed in branch = "
+            to_return += ',\n'.join(map(str, self.findings_removed_in_branch))
+        if self.is_empty():
+            to_return = to_return[:-1] + " NO  CHURN"
+        return to_return
+
+    def is_empty(self):
+        return not (self.added_findings or self.findings_added_in_branch or self.findings_in_changed_code
+                    or self.removed_findings or self.findings_removed_in_branch)
 
     @classmethod
     def from_json(cls, json):

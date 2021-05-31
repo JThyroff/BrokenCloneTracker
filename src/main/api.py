@@ -5,10 +5,10 @@ from teamscale_client import TeamscaleClient
 
 from defintions import JAVA_INT_MAX
 from src.main.api_utils import get_project_api_service_url, get_global_service_url
-from src.main.data import Commit, CommitAlert, FileChange, DiffDescription, DiffType, CloneFinding, CloneFindingChurn
+from src.main.data import Commit, CommitAlert, FileChange, DiffDescription, DiffType, CloneFindingChurn
 from src.main.pretty_print import MyLogger, LogLevel
 
-logger: MyLogger = MyLogger(LogLevel.DUMP)
+logger: MyLogger = MyLogger(LogLevel.VERBOSE)
 
 
 def get_repository_commits(client: TeamscaleClient, start_commit_timestamp: int, end_commit_timestamp,
@@ -112,11 +112,11 @@ def get_diff(client: TeamscaleClient, left_file: str, left_commit_timestamp: int
     # I currently do not understand, whether "normalized" should be true or not : line-based? when disabled?
 
     logger.white("Getting diff for left: " + left_file + " at commit " + str(left_commit_timestamp),
-                 level=LogLevel.VERBOSE)
+                 level=LogLevel.DEBUG)
     logger.white("            and right: " + right_file + " at commit " + str(right_commit_timestamp),
-                 level=LogLevel.VERBOSE)
+                 level=LogLevel.DEBUG)
     link = "http://localhost:8080/compare.html#/" + left + "#&#" + right
-    logger.link(link, level=LogLevel.VERBOSE)
+    logger.blue(link, level=LogLevel.VERBOSE)
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
@@ -133,6 +133,7 @@ def get_diff(client: TeamscaleClient, left_file: str, left_commit_timestamp: int
 
 
 def get_repository_summary(client: TeamscaleClient) -> tuple[int, int]:
+    """get repository summary: means start commit and most recent commit timestamp."""
     logger.white("Getting repository summary", LogLevel.VERBOSE)
     url = get_project_api_service_url(client, "repository-summary")
     parameters = {"only-first-and-last": True}
@@ -143,8 +144,9 @@ def get_repository_summary(client: TeamscaleClient) -> tuple[int, int]:
     return parsed['firstCommit'], parsed['mostRecentCommit']
 
 
-def get_finding_churn_list(client: TeamscaleClient, commit_timestamp: int) -> [CloneFinding]:
-    logger.white("Getting finding churn list for commit: " + str(commit_timestamp), LogLevel.VERBOSE)
+def get_clone_finding_churn(client: TeamscaleClient, commit_timestamp: int) -> CloneFindingChurn:
+    """get clone finding churn for given commit timestamp"""
+    logger.white("Getting clone finding churn for commit: " + str(commit_timestamp), LogLevel.DEBUG)
     url = get_project_api_service_url(client, "finding-churn/list")
     parameters = {
         "t": commit_timestamp

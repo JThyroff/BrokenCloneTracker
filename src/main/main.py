@@ -6,7 +6,7 @@ from teamscale_client.teamscale_client_config import TeamscaleClientConfig
 from src.main.analysis import update_filtered_alert_commits, analyse_one_alert_commit
 from src.main.analysis_utils import are_left_lines_affected_at_diff, is_file_affected_at_file_changes
 from src.main.api import get_diff, get_repository_commits, get_commit_alerts, get_affected_files, \
-    get_repository_summary, get_finding_churn_list
+    get_repository_summary, get_clone_finding_churn
 from src.main.data import DiffType, Commit, DiffDescription
 from src.main.pretty_print import MyLogger, LogLevel
 
@@ -25,21 +25,21 @@ def show_projects(client: TeamscaleClient) -> None:
     print the projects to console
     :param client: the teamscale client
     """
-    logger.separator()
     logger.yellow("List of available Projects: ")
 
     projects = client.get_projects()
     for project in projects:
         print(str(project))
+    logger.separator()
 
 
 def main() -> None:
     client = TeamscaleClient(TEAMSCALE_URL, USERNAME, ACCESS_TOKEN, PROJECT_ID)
     client.check_api_version()
-    get_finding_churn_list(client, 1521580769000)
     analyse_one_alert_commit(client, 1521580769000)
 
     return
+    get_clone_finding_churn(client, 1521580769000)
     get_repository_summary(client)
     update_filtered_alert_commits(client)
     show_projects(client)

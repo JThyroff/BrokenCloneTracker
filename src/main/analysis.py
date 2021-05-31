@@ -7,13 +7,16 @@ import jsonpickle
 from teamscale_client import TeamscaleClient
 
 from defintions import get_alert_file_name, get_project_dir
-from src.main.analysis_utils import is_file_affected_at_file_changes, are_left_lines_affected_at_diff, correct_lines
-from src.main.api import get_repository_summary, get_repository_commits, get_commit_alerts, get_affected_files, get_diff
-from src.main.data import CommitAlert, Commit, FileChange, DiffType, DiffDescription, TextRegionLocation
+from src.main.analysis_utils import is_file_affected_at_file_changes, are_left_lines_affected_at_diff, correct_lines, \
+    filter_clone_finding_churn_by_file
+from src.main.api import get_repository_summary, get_repository_commits, get_commit_alerts, get_affected_files, \
+    get_diff, get_clone_finding_churn
+from src.main.data import CommitAlert, Commit, FileChange, DiffType, DiffDescription, TextRegionLocation, \
+    CloneFindingChurn
 from src.main.persistence import AlertFile
 from src.main.pretty_print import MyLogger, LogLevel
 
-logger: MyLogger = MyLogger(LogLevel.DEBUG)
+logger: MyLogger = MyLogger(LogLevel.VERBOSE)
 
 
 def create_project_dir(project: str):
@@ -138,9 +141,13 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                                                                          DiffType.LINE_BASED))
                     if are_left_lines_affected_at_diff(clone_start_line, clone_end_line,
                                                        diff_dict.get(DiffType.TOKEN_BASED)):
-                        logger.yellow("File affected critical", LogLevel.INFO)
+                        logger.red("File affected critical", LogLevel.VERBOSE)
                     else:
-                        logger.white("File is not affected critical", LogLevel.VERBOSE)
+                        logger.white("File is not affected critical", LogLevel.DEBUG)
+                    clone_finding_churn: CloneFindingChurn = get_clone_finding_churn(client, commit.timestamp)
+                    filter_clone_finding_churn_by_file(expected_file, clone_finding_churn)
+                    if not clone_finding_churn.is_empty():
+                        logger.yellow(str(clone_finding_churn), level=LogLevel.VERBOSE)
                     b = (True, False)
                 if is_file_affected_at_file_changes(expected_sibling, affected_files):
                     logger.white("Sibling affected at commit : " + str(commit.timestamp), level=LogLevel.VERBOSE)
@@ -152,9 +159,13 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                                                                              DiffType.LINE_BASED))
                     if are_left_lines_affected_at_diff(sibling_start_line, sibling_end_line,
                                                        diff_dict.get(DiffType.TOKEN_BASED)):
-                        logger.yellow("Sibling affected critical", LogLevel.INFO)
+                        logger.red("Sibling affected critical", LogLevel.VERBOSE)
                     else:
-                        logger.white("Sibling is not affected critical", LogLevel.VERBOSE)
+                        logger.white("Sibling is not affected critical", LogLevel.DEBUG)
+                    clone_finding_churn: CloneFindingChurn = get_clone_finding_churn(client, commit.timestamp)
+                    filter_clone_finding_churn_by_file(expected_sibling, clone_finding_churn)
+                    if not clone_finding_churn.is_empty():
+                        logger.yellow(str(clone_finding_churn), level=LogLevel.VERBOSE)
                     b = (b[0], True)
                 if b == (True, True):
                     logger.white("-> Both affected", LogLevel.VERBOSE)
