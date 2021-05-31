@@ -85,7 +85,7 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
     # fetch repository summary
     summary: tuple[int, int] = get_repository_summary(client)
 
-    for i in alert_list:
+    for i in alert_list:  # sometimes more than one alert is attached to a commit
         i: CommitAlert
         clone_loc: TextRegionLocation = i.context.expected_clone_location
         sibling_loc: TextRegionLocation = i.context.expected_sibling_location
@@ -116,6 +116,8 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
             step = analysis_start + analysis_step
             if step > summary[1]:
                 step = summary[1]
+            # get repository data in chunks - this was to be able to write temporary results to a file
+            # this is maybe unnecessary yet
             new_commits = get_repository_commits(client, analysis_start, step)
             expected_file = i.context.expected_clone_location.uniform_path
             expected_sibling = i.context.expected_sibling_location.uniform_path

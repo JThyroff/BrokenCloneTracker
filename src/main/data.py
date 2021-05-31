@@ -192,3 +192,127 @@ class DiffDescription:
                    and self.left_change_regions == other.left_change_regions \
                    and self.right_change_lines == other.right_change_lines \
                    and self.right_change_regions == other.right_change_regions
+
+
+@auto_str
+class CloneProperties:
+    def __init__(self, instances: int, length: int, gaps: int):
+        self.instances = instances
+        self.length = length
+        self.gaps = gaps
+
+    @classmethod
+    def from_json(cls, json):
+        return CloneProperties(json["Instances"], json["Length"], json["Gaps"])
+
+    def __eq__(self, other):
+        other: CloneProperties
+        if not isinstance(other, CloneProperties):
+            return NotImplemented
+        elif self is other:
+            return True
+        else:
+            return self.instances == other.instances and self.length == other.length and self.gaps == other.gaps
+
+
+@auto_str
+class CloneFinding:
+    def __init__(self, group_name: str, category_name: str, message: str, location: TextRegionLocation,
+                 finding_id: str, birth_commit: Commit, death_commit: Commit, assessment: str,
+                 sibling_locations: [TextRegionLocation], properties: CloneProperties, analysis_timestamp: int,
+                 type_id: str):
+        self.group_name = group_name
+        self.category_name = category_name
+        self.message = message
+        self.location = location
+        self.finding_id = finding_id
+        self.birth_commit = birth_commit
+        self.death_commit = death_commit
+        self.assessment = assessment
+        self.sibling_locations = sibling_locations
+        self.properties = properties
+        self.analysis_timestamp = analysis_timestamp
+        self.type_id = type_id
+
+    @classmethod
+    def from_json(cls, json):
+        sibling_locations = []
+        for loc in json["siblingLocations"]:
+            sibling_locations.append(TextRegionLocation.from_json(loc))
+        death_commit = None
+        if 'death' in json:
+            death_commit = Commit.from_json(json['death'])
+        return CloneFinding(json["groupName"], json["categoryName"], json["message"],
+                            TextRegionLocation.from_json(json["location"]), json["id"],
+                            Commit.from_json(json["birth"]),
+                            death_commit, json["assessment"], sibling_locations,
+                            CloneProperties.from_json(json["properties"]), json["analysisTimestamp"],
+                            json["typeId"])
+
+    def __eq__(self, other):
+        if not isinstance(other, CloneFinding):
+            return NotImplemented
+        elif self is other:
+            return True
+        else:
+            other: CloneFinding
+            return self.group_name == other.group_name and self.category_name == other.category_name \
+                   and self.message == other.message and self.location == other.location \
+                   and self.finding_id == other.finding_id and self.birth_commit == other.birth_commit \
+                   and self.death_commit == other.death_commit \
+                   and self.assessment == other.assessment \
+                   and self.sibling_locations == other.sibling_locations \
+                   and self.properties == other.properties and self.analysis_timestamp == other.analysis_timestamp \
+                   and self.type_id == other.type_id
+
+
+@auto_str
+class CloneFindingChurn:
+    def __init__(self, commit: Commit, added_findings: [CloneFinding], findings_added_in_branch: [CloneFinding],
+                 findings_in_changed_code: [CloneFinding], removed_findings: [CloneFinding],
+                 findings_removed_in_branch: [CloneFinding]):
+        self.commit = commit
+        self.added_findings = added_findings
+        self.findings_added_in_branch = findings_added_in_branch
+        self.findings_in_changed_code = findings_in_changed_code
+        self.removed_findings = removed_findings
+        self.findings_removed_in_branch = findings_removed_in_branch
+
+    @classmethod
+    def from_json(cls, json):
+        # filters for findings in category 'Code Duplication'
+        added_findings: [CloneFinding] = []
+        for finding in json["addedFindings"]:
+            if finding["categoryName"] == 'Code Duplication':
+                added_findings.append(CloneFinding.from_json(finding))
+        findings_added_in_branch: [CloneFinding] = []
+        for finding in json["findingsAddedInBranch"]:
+            if finding["categoryName"] == 'Code Duplication':
+                findings_added_in_branch.append(CloneFinding.from_json(finding))
+        findings_in_changed_code: [CloneFinding] = []
+        for finding in json['findingsInChangedCode']:
+            if finding["categoryName"] == 'Code Duplication':
+                findings_in_changed_code.append(CloneFinding.from_json(finding))
+        removed_findings: [CloneFinding] = []
+        for finding in json['removedFindings']:
+            if finding["categoryName"] == 'Code Duplication':
+                removed_findings.append(CloneFinding.from_json(finding))
+        findings_removed_in_branch: [CloneFinding] = []
+        for finding in json['findingsRemovedInBranch']:
+            if finding["categoryName"] == 'Code Duplication':
+                findings_removed_in_branch.append(CloneFinding.from_json(finding))
+        return CloneFindingChurn(Commit.from_json(json["commit"]), added_findings, findings_added_in_branch,
+                                 findings_in_changed_code, removed_findings, findings_removed_in_branch)
+
+    def __eq__(self, other):
+        if not isinstance(other, CloneFindingChurn):
+            return NotImplemented
+        elif self is other:
+            return True
+        else:
+            other: CloneFindingChurn
+            return self.commit == other.commit and self.added_findings == other.added_findings \
+                   and self.findings_added_in_branch == other.findings_added_in_branch \
+                   and self.findings_in_changed_code == other.findings_in_changed_code \
+                   and self.removed_findings == other.removed_findings \
+                   and self.findings_removed_in_branch == other.findings_removed_in_branch

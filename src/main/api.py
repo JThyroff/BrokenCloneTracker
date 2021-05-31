@@ -5,10 +5,10 @@ from teamscale_client import TeamscaleClient
 
 from defintions import JAVA_INT_MAX
 from src.main.api_utils import get_project_api_service_url, get_global_service_url
-from src.main.data import Commit, CommitAlert, FileChange, DiffDescription, DiffType
+from src.main.data import Commit, CommitAlert, FileChange, DiffDescription, DiffType, CloneFinding, CloneFindingChurn
 from src.main.pretty_print import MyLogger, LogLevel
 
-logger: MyLogger = MyLogger(LogLevel.VERBOSE)
+logger: MyLogger = MyLogger(LogLevel.DUMP)
 
 
 def get_repository_commits(client: TeamscaleClient, start_commit_timestamp: int, end_commit_timestamp,
@@ -141,3 +141,19 @@ def get_repository_summary(client: TeamscaleClient) -> tuple[int, int]:
     parsed = json.loads(response.text)
     logger.white(json.dumps(parsed, indent=4, sort_keys=True), level=LogLevel.VERBOSE)
     return parsed['firstCommit'], parsed['mostRecentCommit']
+
+
+def get_finding_churn_list(client: TeamscaleClient, commit_timestamp: int) -> [CloneFinding]:
+    logger.white("Getting finding churn list for commit: " + str(commit_timestamp), LogLevel.VERBOSE)
+    url = get_project_api_service_url(client, "finding-churn/list")
+    parameters = {
+        "t": commit_timestamp
+    }
+
+    response: requests.Response = client.get(url, parameters)
+    parsed = json.loads(response.text)
+    logger.white(json.dumps(parsed, indent=4, sort_keys=True), level=LogLevel.DUMP)
+
+    clone_finding_churn: CloneFindingChurn = CloneFindingChurn.from_json(parsed)
+
+    return clone_finding_churn
