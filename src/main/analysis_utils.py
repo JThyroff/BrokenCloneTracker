@@ -19,13 +19,17 @@ def are_left_lines_affected_at_diff(raw_start_line: int, raw_end_line: int, diff
     return False
 
 
-def filter_clone_finding_churn_by_file(file_uniform_path: str,
+def filter_clone_finding_churn_by_file(file_uniform_paths: [str],
                                        clone_finding_churn: CloneFindingChurn) -> CloneFindingChurn:
-    """filter a clone finding churn by file. All findings will be reduced to the one where the file is affected"""
+    """filter a clone finding churn by files. All findings will be reduced to the one where all files in the given
+    list are affected"""
 
     def file_filter(x: CloneFinding) -> bool:
-        return x.location.uniform_path == file_uniform_path \
-               or file_uniform_path in [e.uniform_path for e in x.sibling_locations]
+        for file_path in file_uniform_paths:
+            # if one file not affected return False
+            if not (x.location.uniform_path == file_path or file_path in [e.uniform_path for e in x.sibling_locations]):
+                return False
+        return True
 
     clone_finding_churn.added_findings = list(filter(lambda x: file_filter(x), clone_finding_churn.added_findings))
     clone_finding_churn.findings_added_in_branch = list(

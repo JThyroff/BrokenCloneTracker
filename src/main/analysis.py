@@ -144,10 +144,6 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                         logger.red("File affected critical", LogLevel.VERBOSE)
                     else:
                         logger.white("File is not affected critical", LogLevel.DEBUG)
-                    clone_finding_churn: CloneFindingChurn = get_clone_finding_churn(client, commit.timestamp)
-                    filter_clone_finding_churn_by_file(expected_file, clone_finding_churn)
-                    if not clone_finding_churn.is_empty():
-                        logger.yellow(str(clone_finding_churn), level=LogLevel.VERBOSE)
                     b = (True, False)
                 if is_file_affected_at_file_changes(expected_sibling, affected_files):
                     logger.white("Sibling affected at commit : " + str(commit.timestamp), level=LogLevel.VERBOSE)
@@ -162,11 +158,14 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                         logger.red("Sibling affected critical", LogLevel.VERBOSE)
                     else:
                         logger.white("Sibling is not affected critical", LogLevel.DEBUG)
-                    clone_finding_churn: CloneFindingChurn = get_clone_finding_churn(client, commit.timestamp)
-                    filter_clone_finding_churn_by_file(expected_sibling, clone_finding_churn)
-                    if not clone_finding_churn.is_empty():
-                        logger.yellow(str(clone_finding_churn), level=LogLevel.VERBOSE)
                     b = (b[0], True)
+                # get clone finding churn for commit: filter for clones where both files are affected
+                # TODO debug and test this. Print maybe link to Finding
+                clone_finding_churn: CloneFindingChurn = get_clone_finding_churn(client, commit.timestamp)
+                filter_clone_finding_churn_by_file([expected_file, expected_sibling], clone_finding_churn)
+                if not clone_finding_churn.is_empty():
+                    logger.yellow(str(clone_finding_churn), level=LogLevel.VERBOSE)
+
                 if b == (True, True):
                     logger.white("-> Both affected", LogLevel.VERBOSE)
                 elif b == (True, False) or b == (False, True):
