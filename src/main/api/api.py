@@ -67,11 +67,11 @@ def get_commit_alerts(client: TeamscaleClient, commit_timestamps: [int]) -> dict
 
     commit_alert_list_dict: dict[Commit, [CommitAlert]] = dict()
 
-    for i in range(len(parsed)):
+    for commit_alert_dict_entry in parsed:
         alert_list: [CommitAlert] = []
-        for entry in parsed[i]['alerts']:
+        for entry in commit_alert_dict_entry['alerts']:
             alert_list.append(CommitAlert.from_json(entry))
-        commit: Commit = Commit.from_json(parsed[i]['commit'])
+        commit: Commit = Commit.from_json(commit_alert_dict_entry['commit'])
 
         commit_alert_list_dict.update({commit: alert_list})
 
