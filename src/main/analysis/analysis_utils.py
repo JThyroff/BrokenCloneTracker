@@ -1,7 +1,21 @@
+from enum import Enum
+
 import portion
 from portion import Interval
 
 from src.main.data import FileChange, DiffDescription, CloneFindingChurn, CloneFinding, CommitAlert
+
+
+class Affectedness(Enum):
+    NOT_AFFECTED = 1
+    AFFECTED_BY_COMMIT = 2
+    AFFECTED_CRITICAL = 3
+
+    def __mul__(self, other):
+        return self.value * other.value
+
+    def __rmul__(self, other):
+        return self.value * other.value
 
 
 class AnalysisResult:
