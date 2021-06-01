@@ -60,6 +60,28 @@ class AnalysisResult:
         # TODO? Lacking of a critical classification for introduced clones. Happens not that often
         self.clone_findings_count = clone_findings_count
 
+    def set_file_args(self, corrected_clone_start_line, corrected_clone_end_line, file_affected_count,
+                      file_affected_critical_count):
+        self.corrected_clone_start_line = corrected_clone_start_line
+        self.corrected_clone_end_line = corrected_clone_end_line
+        self.file_affected_count = file_affected_count
+        self.file_affected_critical_count = file_affected_critical_count
+
+    def set_sibling_args(self, corrected_sibling_start_line, corrected_sibling_end_line, sibling_affected_count,
+                         sibling_affected_critical_count):
+        self.corrected_sibling_start_line = corrected_sibling_start_line
+        self.corrected_sibling_end_line = corrected_sibling_end_line
+        self.sibling_affected_count = sibling_affected_count
+        self.sibling_affected_critical_count = sibling_affected_critical_count
+
+    def get_file_args(self):
+        return [self.corrected_clone_start_line, self.corrected_clone_end_line, self.file_affected_count,
+                self.file_affected_critical_count]
+
+    def get_sibling_args(self):
+        return [self.corrected_sibling_start_line, self.corrected_sibling_end_line, self.sibling_affected_count,
+                self.sibling_affected_critical_count]
+
     @staticmethod
     def from_alert(project: str, first_commit: int, most_recent_commit: int, analysed_until: int,
                    commit_alert: CommitAlert):

@@ -161,3 +161,7 @@ class TestAnalysisUtils(unittest.TestCase):
         raw_start_line, raw_end_line = correct_lines(raw_start_line, raw_end_line, diff_desc)
         self.assertEqual(5, raw_start_line)
         self.assertEqual(26, raw_end_line)
+
+
+if __name__ == '__main__':
+    unittest.main()
