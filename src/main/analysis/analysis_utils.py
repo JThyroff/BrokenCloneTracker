@@ -1,7 +1,67 @@
 import portion
 from portion import Interval
 
-from src.main.data import FileChange, DiffDescription, CloneFindingChurn, CloneFinding
+from src.main.data import FileChange, DiffDescription, CloneFindingChurn, CloneFinding, CommitAlert
+
+
+class AnalysisResult:
+    """A class representing one analysis result"""
+
+    def __init__(self, project: str, first_commit: int, most_recent_commit: int, analysed_until: int,
+                 commit_alert: CommitAlert, corrected_clone_start_line: int, corrected_clone_end_line: int,
+                 corrected_sibling_start_line: int, corrected_sibling_end_line: int,
+                 file_affected_count: int,
+                 file_affected_critical_count: int,
+                 sibling_affected_count: int,
+                 sibling_affected_critical_count: int, one_file_affected_count: int, both_files_affected_count: int,
+                 one_file_affected_critical_count: int, both_files_affected_critical_count: int,
+                 clone_findings_count: int):
+        # project meta
+        self.project = project
+        self.first_commit = first_commit
+        self.most_recent_commit = most_recent_commit
+        self.analysed_until = analysed_until
+        self.commit_alert = commit_alert
+        # corrected line intervals
+        self.corrected_clone_start_line = corrected_clone_start_line
+        self.corrected_clone_end_line = corrected_clone_end_line
+        self.corrected_sibling_start_line = corrected_sibling_start_line
+        self.corrected_sibling_end_line = corrected_sibling_end_line
+        # how often a file was affected by a commit and how often it was affected in the relevant text passage
+        self.file_affected_count = file_affected_count
+        self.file_affected_critical_count = file_affected_critical_count
+        self.sibling_affected_count = sibling_affected_count
+        self.sibling_affected_critical_count = sibling_affected_critical_count
+        # how often only one file was affected by a commit or how often both - and how often it was critical
+        self.one_file_affected_count = one_file_affected_count
+        self.both_files_affected_count = both_files_affected_count
+        self.one_file_affected_critical_count = one_file_affected_critical_count
+        self.both_files_affected_critical_count = both_files_affected_critical_count
+        # later introduced clone findings where both files are affected
+        # TODO? Lacking of a critical classification for introduced clones. Happens not that often
+        self.clone_findings_count = clone_findings_count
+
+    def __eq__(self, other):
+        if not isinstance(other, AnalysisResult):
+            return NotImplemented
+        elif self is other:
+            return True
+        else:
+            other: AnalysisResult
+            return self.project == other.project \
+                   and self.first_commit == other.first_commit \
+                   and self.most_recent_commit == other.most_recent_commit \
+                   and self.analysed_until == other.analysed_until \
+                   and self.commit_alert == other.commit_alert \
+                   and self.file_affected_count == other.file_affected_count \
+                   and self.file_affected_critical_count == other.file_affected_critical_count \
+                   and self.sibling_affected_count == other.sibling_affected_count \
+                   and self.sibling_affected_critical_count == other.sibling_affected_critical_count \
+                   and self.one_file_affected_count == other.one_file_affected_count \
+                   and self.both_files_affected_count == other.both_files_affected_count \
+                   and self.one_file_affected_critical_count == other.one_file_affected_critical_count \
+                   and self.both_files_affected_critical_count == other.both_files_affected_critical_count \
+                   and self.clone_findings_count == other.clone_findings_count
 
 
 def is_file_affected_at_file_changes(file_uniform_path: str, affected_files: [FileChange]) -> bool:
