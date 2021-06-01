@@ -4,7 +4,7 @@ from teamscale_client import TeamscaleClient
 from teamscale_client.teamscale_client_config import TeamscaleClientConfig
 from teamscale_client.utils import auto_str
 
-from src.main.data import Commit
+from src.main.api.data import Commit
 from src.main.pretty_print import LogLevel, MyLogger
 
 logger: MyLogger = MyLogger(LogLevel.INFO)

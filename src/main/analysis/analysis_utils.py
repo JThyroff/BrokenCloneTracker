@@ -3,7 +3,8 @@ from enum import Enum
 import portion
 from portion import Interval
 
-from src.main.data import FileChange, DiffDescription, CloneFindingChurn, CloneFinding, CommitAlert
+from src.main.api.data import FileChange, DiffDescription, CloneFindingChurn, CloneFinding, CommitAlert, \
+    CommitAlertContext
 
 
 class Affectedness(Enum):
@@ -22,14 +23,18 @@ class AnalysisResult:
     """A class representing one analysis result"""
 
     def __init__(self, project: str, first_commit: int, most_recent_commit: int, analysed_until: int,
-                 commit_alert: CommitAlert, corrected_clone_start_line: int, corrected_clone_end_line: int,
+                 commit_alert: CommitAlert,
+                 corrected_clone_start_line: int, corrected_clone_end_line: int,
                  corrected_sibling_start_line: int, corrected_sibling_end_line: int,
-                 file_affected_count: int,
-                 file_affected_critical_count: int,
-                 sibling_affected_count: int,
-                 sibling_affected_critical_count: int, one_file_affected_count: int, both_files_affected_count: int,
-                 one_file_affected_critical_count: int, both_files_affected_critical_count: int,
-                 clone_findings_count: int):
+                 file_affected_count: int = 0,
+                 file_affected_critical_count: int = 0,
+                 sibling_affected_count: int = 0,
+                 sibling_affected_critical_count: int = 0,
+                 one_file_affected_count: int = 0,
+                 both_files_affected_count: int = 0,
+                 one_file_affected_critical_count: int = 0,
+                 both_files_affected_critical_count: int = 0,
+                 clone_findings_count: int = 0):
         # project meta
         self.project = project
         self.first_commit = first_commit
@@ -54,6 +59,17 @@ class AnalysisResult:
         # later introduced clone findings where both files are affected
         # TODO? Lacking of a critical classification for introduced clones. Happens not that often
         self.clone_findings_count = clone_findings_count
+
+    @staticmethod
+    def from_alert(project: str, first_commit: int, most_recent_commit: int, analysed_until: int,
+                   commit_alert: CommitAlert):
+        """create an analysis result from project meta and given commit alert. All counters are initialized with 0."""
+        ctx: CommitAlertContext = commit_alert.context
+        return AnalysisResult(project, first_commit, most_recent_commit, analysed_until, commit_alert,
+                              ctx.expected_clone_location.raw_start_line,
+                              ctx.expected_clone_location.raw_end_line,
+                              ctx.expected_sibling_location.raw_start_line,
+                              ctx.expected_sibling_location.raw_end_line, *([0] * 9))
 
     def __eq__(self, other):
         if not isinstance(other, AnalysisResult):

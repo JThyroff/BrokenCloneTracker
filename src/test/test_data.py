@@ -2,7 +2,7 @@ import unittest
 
 import portion
 
-from src.main.data import Commit, CommitAlert, CommitAlertContext, TextRegionLocation, FileChange, DiffDescription, \
+from src.main.api.data import Commit, CommitAlert, CommitAlertContext, TextRegionLocation, FileChange, DiffDescription, \
     DiffType
 
 

@@ -2,7 +2,7 @@ from teamscale_client import TeamscaleClient
 
 from src.main.analysis.analysis import analyse_one_alert_commit
 from src.main.analysis.analysis_utils import are_left_lines_affected_at_diff, is_file_affected_at_file_changes
-from src.main.data import DiffType, Commit, DiffDescription
+from src.main.api.data import DiffType, Commit, DiffDescription
 from src.main.persistence import parse_args
 from src.main.pretty_print import MyLogger, LogLevel
 

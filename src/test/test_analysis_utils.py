@@ -5,7 +5,7 @@ from portion import Interval
 
 from src.main.analysis.analysis_utils import is_file_affected_at_file_changes, are_left_lines_affected_at_diff, \
     get_interval_length, correct_lines
-from src.main.data import FileChange, DiffDescription
+from src.main.api.data import FileChange, DiffDescription
 
 
 def build_test_list() -> [FileChange]:

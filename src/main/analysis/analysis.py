@@ -8,11 +8,10 @@ from teamscale_client import TeamscaleClient
 from defintions import get_alert_file_name, get_project_dir
 from src.main.analysis.analysis_utils import is_file_affected_at_file_changes, are_left_lines_affected_at_diff, \
     correct_lines, \
-    filter_clone_finding_churn_by_file, Affectedness
+    filter_clone_finding_churn_by_file, Affectedness, AnalysisResult
 from src.main.api.api import get_repository_summary, get_repository_commits, get_commit_alerts, get_affected_files, \
     get_diff, get_clone_finding_churn
-from src.main.data import CommitAlert, Commit, FileChange, DiffType, DiffDescription, TextRegionLocation, \
-    CloneFindingChurn
+from src.main.api.data import CommitAlert, Commit, FileChange, DiffType, DiffDescription, CloneFindingChurn
 from src.main.persistence import AlertFile
 from src.main.pretty_print import MyLogger, LogLevel
 
@@ -82,33 +81,35 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
 
     # fetch repository summary
     summary: tuple[int, int] = get_repository_summary(client)
+    # project meta: (project_name, first_commit, most_recent_commit, analysed_until) # not analysed yet
+    project_meta = (client.project, *summary, summary[0] - 1)
 
-    for i in alert_list:  # sometimes more than one alert is attached to a commit
-        i: CommitAlert
-        clone_loc: TextRegionLocation = i.context.expected_clone_location
-        sibling_loc: TextRegionLocation = i.context.expected_sibling_location
+    for commit_alert in alert_list:  # sometimes more than one alert is attached to a commit
+        commit_alert: CommitAlert
+
+        analysis_result: AnalysisResult = AnalysisResult.from_alert(*project_meta, commit_alert=commit_alert)
 
         # region logging
         logger.separator(level=LogLevel.VERBOSE)
-        logger.yellow("Analysing Alert: " + i.message, LogLevel.VERBOSE)
-        logger.yellow("Expected clone location: " + str(i.context.expected_clone_location.uniform_path),
+        logger.yellow("Analysing Alert: " + commit_alert.message, LogLevel.VERBOSE)
+        logger.yellow("Expected clone location: " + str(commit_alert.context.expected_clone_location.uniform_path),
                       level=LogLevel.VERBOSE)
-        logger.yellow("Clone.raw_start_line: " + str(clone_loc.raw_start_line), level=LogLevel.VERBOSE)
-        logger.yellow("Clone.raw_end_line: " + str(clone_loc.raw_end_line), level=LogLevel.VERBOSE)
-        logger.yellow("Expected sibling location: " + str(i.context.expected_sibling_location.uniform_path),
+        logger.yellow("Clone.raw_start_line: " + str(analysis_result.corrected_clone_start_line),
                       level=LogLevel.VERBOSE)
-        logger.yellow("Sibling.raw_start_line: " + str(sibling_loc.raw_start_line), level=LogLevel.VERBOSE)
-        logger.yellow("Sibling.raw_end_line: " + str(sibling_loc.raw_end_line), level=LogLevel.VERBOSE)
+        logger.yellow("Clone.raw_end_line: " + str(analysis_result.corrected_clone_end_line),
+                      level=LogLevel.VERBOSE)
+        logger.yellow("Expected sibling location: " + str(commit_alert.context.expected_sibling_location.uniform_path),
+                      level=LogLevel.VERBOSE)
+        logger.yellow("Sibling.raw_start_line: " + str(analysis_result.corrected_sibling_start_line),
+                      level=LogLevel.VERBOSE)
+        logger.yellow("Sibling.raw_end_line: " + str(analysis_result.corrected_sibling_end_line),
+                      level=LogLevel.VERBOSE)
         logger.separator(LogLevel.VERBOSE)
         # endregion
         # start analysis
         analysis_start: int = alert_commit_timestamp + 1
         analysis_step: int = 15555555_000  # milliseconds. 6 months
-        # two variables each two handle the offset of the broken clone region over time
-        corrected_clone_start_line = clone_loc.raw_start_line
-        corrected_clone_end_line = clone_loc.raw_end_line
-        corrected_sibling_start_line = sibling_loc.raw_start_line
-        corrected_sibling_end_line = sibling_loc.raw_end_line
+
         commit_list: [Commit] = []
         while analysis_start < summary[1]:
             step = analysis_start + analysis_step
@@ -117,8 +118,8 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
             # get repository data in chunks - this was to be able to write temporary results to a file
             # this is maybe unnecessary yet
             new_commits = get_repository_commits(client, analysis_start, step)
-            expected_file = i.context.expected_clone_location.uniform_path
-            expected_sibling = i.context.expected_sibling_location.uniform_path
+            expected_file = commit_alert.context.expected_clone_location.uniform_path
+            expected_sibling = commit_alert.context.expected_sibling_location.uniform_path
             previous_commit_timestamp = alert_commit_timestamp
 
             for commit in new_commits:
@@ -127,12 +128,16 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                 param_tuple = (client, commit.timestamp, previous_commit_timestamp, affected_files)
                 # check file
                 file_affectedness: Affectedness
-                file_affectedness, corrected_clone_start_line, corrected_clone_end_line = \
-                    check_file(*param_tuple, expected_file, corrected_clone_start_line, corrected_clone_end_line)
+                (file_affectedness, analysis_result.corrected_clone_start_line,
+                 analysis_result.corrected_clone_end_line) = check_file(*param_tuple, expected_file,
+                                                                        analysis_result.corrected_clone_start_line,
+                                                                        analysis_result.corrected_clone_end_line)
                 # check sibling
                 sibling_affectedness: Affectedness
-                sibling_affectedness, corrected_sibling_start_line, corrected_sibling_end_line = \
-                    check_file(*param_tuple, expected_sibling, corrected_sibling_start_line, corrected_sibling_end_line)
+                (sibling_affectedness, analysis_result.corrected_sibling_start_line,
+                 analysis_result.corrected_sibling_end_line) = check_file(*param_tuple, expected_sibling,
+                                                                          analysis_result.corrected_sibling_start_line,
+                                                                          analysis_result.corrected_sibling_end_line)
                 # get clone finding churn for commit: filter for clones where both files are affected
                 clone_finding_churn: CloneFindingChurn = get_clone_finding_churn(client, commit.timestamp)
                 filter_clone_finding_churn_by_file([expected_file, expected_sibling], clone_finding_churn)
@@ -158,14 +163,18 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
         # region logging
         logger.separator(level=LogLevel.DEBUG)
         logger.white("Corrected lines:", level=LogLevel.DEBUG)
-        logger.white("Expected clone location: " + str(i.context.expected_clone_location.uniform_path),
+        logger.white("Expected clone location: " + str(commit_alert.context.expected_clone_location.uniform_path),
                      level=LogLevel.DEBUG)
-        logger.white("Clone.start_line (corrected): " + str(corrected_clone_start_line), level=LogLevel.DEBUG)
-        logger.white("Clone.end_line (corrected): " + str(corrected_clone_end_line), level=LogLevel.DEBUG)
-        logger.white("Expected sibling location: " + str(i.context.expected_sibling_location.uniform_path),
+        logger.white("Clone.start_line (corrected): " + str(analysis_result.corrected_clone_start_line),
                      level=LogLevel.DEBUG)
-        logger.white("Sibling.start_line (corrected): " + str(corrected_sibling_start_line), level=LogLevel.DEBUG)
-        logger.white("Sibling.end_line (corrected): " + str(corrected_sibling_end_line), level=LogLevel.DEBUG)
+        logger.white("Clone.end_line (corrected): " + str(analysis_result.corrected_clone_end_line),
+                     level=LogLevel.DEBUG)
+        logger.white("Expected sibling location: " + str(commit_alert.context.expected_sibling_location.uniform_path),
+                     level=LogLevel.DEBUG)
+        logger.white("Sibling.start_line (corrected): " + str(analysis_result.corrected_sibling_start_line),
+                     level=LogLevel.DEBUG)
+        logger.white("Sibling.end_line (corrected): " + str(analysis_result.corrected_sibling_end_line),
+                     level=LogLevel.DEBUG)
         # endregion
     pass
 

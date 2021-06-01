@@ -5,7 +5,7 @@ from teamscale_client import TeamscaleClient
 
 from defintions import JAVA_INT_MAX
 from src.main.api.api_utils import get_project_api_service_url, get_global_service_url
-from src.main.data import Commit, CommitAlert, FileChange, DiffDescription, DiffType, CloneFindingChurn
+from src.main.api.data import Commit, CommitAlert, FileChange, DiffDescription, DiffType, CloneFindingChurn
 from src.main.pretty_print import MyLogger, LogLevel
 
 logger: MyLogger = MyLogger(LogLevel.VERBOSE)
