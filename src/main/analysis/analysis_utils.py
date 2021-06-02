@@ -60,6 +60,19 @@ class AnalysisResult:
         # TODO? Lacking of a critical classification for introduced clones. Happens not that often
         self.clone_findings_count = clone_findings_count
 
+    def __str__(self):
+        return ("Analysis Result for: " + str(self.project) + " first commit: " + str(self.first_commit) + " most recent commit: "
+                + str(self.most_recent_commit) + " analysed until: " + str(self.analysed_until) + "\nCommit Alert: "
+                + str(self.commit_alert) + "\nCorrected clone interval: [" + str(self.corrected_clone_start_line) + ","
+                + str(self.corrected_clone_end_line) + ")\nCorrected sibling interval: [" + str(self.corrected_sibling_start_line) + ","
+                + str(self.corrected_sibling_end_line) + ")\nFile affected count: " + str(self.file_affected_count)
+                + "\nFile affected critical count: " + str(self.file_affected_critical_count) + "\nSibling affected count: "
+                + str(self.sibling_affected_count) + "\nSibling affected critical count: " + str(self.sibling_affected_critical_count)
+                + "\nOne file affected count: " + str(self.one_file_affected_count) + "\nBoth files affected count: "
+                + str(self.both_files_affected_count) + "\nOne file affected critical count: "
+                + str(self.one_file_affected_critical_count) + "\nBoth files affected critical count: "
+                + str(self.both_files_affected_critical_count) + "\nRelevant clone findings count: " + str(self.clone_findings_count))
+
     def set_file_args(self, corrected_clone_start_line, corrected_clone_end_line, file_affected_count,
                       file_affected_critical_count):
         self.corrected_clone_start_line = corrected_clone_start_line
