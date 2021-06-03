@@ -25,95 +25,50 @@ class Affectedness(Enum):
 
 
 @dataclass
-class FileMetrics:
-    corrected_instance_start_line: int
-    corrected_instance_end_line: int
-    file_affected_count: int
-    instance_affected_count: int
-    instance_deleted: bool
+class InstanceMetrics:
+    corrected_start_line: int
+    corrected_end_line: int
+    file_affected_count: int = 0
+    affected_critical_count: int = 0
+    deleted: bool = False
+
+    def get_corrected_interval(self) -> str:
+        return "[" + str(self.corrected_start_line) + "," + str(self.corrected_end_line) + ")"
 
 
+@dataclass
 class AnalysisResult:
     """A class representing one analysis result"""
 
-    def __init__(self, project: str, first_commit: int, most_recent_commit: int, analysed_until: int,
-                 commit_alert: CommitAlert,
-                 corrected_instance_start_line: int, corrected_instance_end_line: int,
-                 corrected_sibling_start_line: int, corrected_sibling_end_line: int,
-                 file_affected_count: int = 0,
-                 instance_affected_critical_count: int = 0,
-                 sibling_file_affected_count: int = 0,
-                 sibling_instance_affected_critical_count: int = 0,
-                 instance_deleted: bool = False,
-                 sibling_deleted: bool = False,
-                 one_file_affected_count: int = 0,
-                 both_files_affected_count: int = 0,
-                 one_instance_affected_critical_count: int = 0,
-                 both_instances_affected_critical_count: int = 0,
-                 clone_findings_count: int = 0):
-        # project meta
-        self.project = project
-        self.first_commit = first_commit
-        self.most_recent_commit = most_recent_commit
-        self.analysed_until = analysed_until
-        self.commit_alert = commit_alert
-        # corrected line intervals
-        self.corrected_instance_start_line = corrected_instance_start_line
-        self.corrected_instance_end_line = corrected_instance_end_line
-        self.corrected_sibling_start_line = corrected_sibling_start_line
-        self.corrected_sibling_end_line = corrected_sibling_end_line
-        # how often a file was affected by a commit and how often it was affected in the relevant text passage
-        self.file_affected_count = file_affected_count
-        self.instance_affected_critical_count = instance_affected_critical_count
-        self.sibling_file_affected_count = sibling_file_affected_count
-        self.sibling_instance_affected_critical_count = sibling_instance_affected_critical_count
-        #
-        self.instance_deleted = instance_deleted
-        self.sibling_instance_deleted = sibling_deleted
-        # how often only one file was affected by a commit or how often both - and how often it was critical
-        self.one_file_affected_count = one_file_affected_count
-        self.both_files_affected_count = both_files_affected_count
-        self.one_instance_affected_critical_count = one_instance_affected_critical_count
-        self.both_instances_affected_critical_count = both_instances_affected_critical_count
-        # later introduced clone findings where both files are affected
-        # TODO? Lacking of a critical classification for introduced clones. Happens not that often
-        self.clone_findings_count = clone_findings_count
+    project: str
+    first_commit: int
+    most_recent_commit: int
+    analysed_until: int
+    commit_alert: CommitAlert
+    # Instance metrics
+    instance_metrics: InstanceMetrics
+    sibling_instance_metrics: InstanceMetrics
+    #
+    one_file_affected_count: int = 0
+    both_files_affected_count: int = 0
+    one_instance_affected_critical_count: int = 0
+    both_instances_affected_critical_count: int = 0
+    clone_findings_count: int = 0
 
     def __str__(self):
         return ("Analysis Result for: " + str(self.project) + " first commit: " + str(self.first_commit) + " most recent commit: "
                 + str(self.most_recent_commit) + " analysed until: " + str(self.analysed_until) + "\nCommit Alert: "
-                + str(self.commit_alert) + "\nCorrected instance interval: [" + str(self.corrected_instance_start_line) + ","
-                + str(self.corrected_instance_end_line) + ")\nCorrected sibling interval: [" + str(self.corrected_sibling_start_line) + ","
-                + str(self.corrected_sibling_end_line) + ")\nFile affected count: " + str(self.file_affected_count)
-                + "\nInstance affected critical count: " + str(self.instance_affected_critical_count) + "\nSibling file affected count: "
-                + str(self.sibling_file_affected_count) + "\nSibling instance affected critical count: " + str(
-                    self.sibling_instance_affected_critical_count)
+                + str(self.commit_alert) + "\nCorrected instance interval:" + self.instance_metrics.get_corrected_interval()
+                + "\nCorrected sibling interval:" + self.sibling_instance_metrics.get_corrected_interval()
+                + "\nFile affected count: " + str(self.instance_metrics.file_affected_count)
+                + "\nInstance affected critical count: "
+                + str(self.instance_metrics.affected_critical_count) + "\nSibling file affected count: "
+                + str(self.sibling_instance_metrics.file_affected_count) + "\nSibling instance affected critical count: "
+                + str(self.sibling_instance_metrics.affected_critical_count)
                 + "\nOne file affected count: " + str(self.one_file_affected_count) + "\nBoth files affected count: "
                 + str(self.both_files_affected_count) + "\nOne file affected critical count: "
                 + str(self.one_instance_affected_critical_count) + "\nBoth files affected critical count: "
                 + str(self.both_instances_affected_critical_count) + "\nRelevant clone findings count: " + str(self.clone_findings_count))
-
-    def set_file_args(self, corrected_instance_start_line, corrected_instance_end_line, file_affected_count,
-                      file_affected_critical_count):
-        self.corrected_instance_start_line = corrected_instance_start_line
-        self.corrected_instance_end_line = corrected_instance_end_line
-        self.file_affected_count = file_affected_count
-        self.instance_affected_critical_count = file_affected_critical_count
-
-    def set_sibling_args(self, corrected_sibling_start_line, corrected_sibling_end_line, sibling_affected_count,
-                         sibling_affected_critical_count):
-        self.corrected_sibling_start_line = corrected_sibling_start_line
-        self.corrected_sibling_end_line = corrected_sibling_end_line
-        self.sibling_file_affected_count = sibling_affected_count
-        self.sibling_instance_affected_critical_count = sibling_affected_critical_count
-
-    def get_file_args(self):
-        return [self.corrected_instance_start_line, self.corrected_instance_end_line, self.file_affected_count,
-                self.instance_affected_critical_count]
-
-    def get_sibling_args(self):
-        return [self.corrected_sibling_start_line, self.corrected_sibling_end_line, self.sibling_file_affected_count,
-                self.sibling_instance_affected_critical_count]
 
     @staticmethod
     def from_alert(project: str, first_commit: int, most_recent_commit: int, analysed_until: int,
@@ -121,34 +76,10 @@ class AnalysisResult:
         """create an analysis result from project meta and given commit alert. All counters are initialized with 0."""
         ctx: CommitAlertContext = commit_alert.context
         return AnalysisResult(project, first_commit, most_recent_commit, analysed_until, commit_alert,
-                              ctx.expected_clone_location.raw_start_line,
-                              ctx.expected_clone_location.raw_end_line,
-                              ctx.expected_sibling_location.raw_start_line,
-                              ctx.expected_sibling_location.raw_end_line, *([0] * 9))
-
-    def __eq__(self, other):
-        if not isinstance(other, AnalysisResult):
-            return NotImplemented
-        elif self is other:
-            return True
-        else:
-            other: AnalysisResult
-            return (self.project == other.project
-                    and self.first_commit == other.first_commit
-                    and self.most_recent_commit == other.most_recent_commit
-                    and self.analysed_until == other.analysed_until
-                    and self.commit_alert == other.commit_alert
-                    and self.file_affected_count == other.file_affected_count
-                    and self.instance_affected_critical_count == other.instance_affected_critical_count
-                    and self.sibling_file_affected_count == other.sibling_file_affected_count
-                    and self.sibling_instance_affected_critical_count == other.sibling_instance_affected_critical_count
-                    and self.instance_deleted == other.instance_deleted
-                    and self.sibling_instance_deleted == other.sibling_instance_deleted
-                    and self.one_file_affected_count == other.one_file_affected_count
-                    and self.both_files_affected_count == other.both_files_affected_count
-                    and self.one_instance_affected_critical_count == other.one_instance_affected_critical_count
-                    and self.both_instances_affected_critical_count == other.both_instances_affected_critical_count
-                    and self.clone_findings_count == other.clone_findings_count)
+                              InstanceMetrics(ctx.expected_clone_location.raw_start_line,
+                                              ctx.expected_clone_location.raw_end_line),
+                              InstanceMetrics(ctx.expected_sibling_location.raw_start_line,
+                                              ctx.expected_sibling_location.raw_end_line))
 
 
 def is_file_affected_at_file_changes(file_uniform_path: str, affected_files: [FileChange]) -> bool:
