@@ -6,16 +6,16 @@ import jsonpickle
 from teamscale_client import TeamscaleClient
 
 from defintions import get_alert_file_name, get_project_dir
-from src.main.analysis.analysis_utils import is_file_affected_at_file_changes, are_left_lines_affected_at_diff, \
-    correct_lines, \
-    filter_clone_finding_churn_by_file, Affectedness, AnalysisResult, TextSectionDeletedError, InstanceMetrics
+from src.main.analysis.analysis_utils import (is_file_affected_at_file_changes, are_left_lines_affected_at_diff,
+                                              correct_lines, filter_clone_finding_churn_by_file, Affectedness, AnalysisResult,
+                                              TextSectionDeletedError, InstanceMetrics)
 from src.main.api.api import get_repository_summary, get_repository_commits, get_commit_alerts, get_affected_files, \
     get_diff, get_clone_finding_churn
 from src.main.api.data import CommitAlert, Commit, FileChange, DiffType, DiffDescription, CloneFindingChurn
 from src.main.persistence import AlertFile
-from src.main.pretty_print import MyLogger, LogLevel
+from src.main.pretty_print import MyLogger, LogLevel, SEPARATOR
 
-logger: MyLogger = MyLogger(LogLevel.VERBOSE)
+logger: MyLogger = MyLogger(LogLevel.DEBUG)
 
 
 def create_project_dir(project: str):
@@ -79,27 +79,17 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
         if type(key) == Commit and key.timestamp == alert_commit_timestamp:
             alert_list = alerts[key]
 
-    # fetch repository summary
-    summary: tuple[int, int] = get_repository_summary(client)
-    # project meta: (project_name, first_commit, most_recent_commit, analysed_until) # not analysed yet
-    project_meta = (client.project, *summary, summary[0] - 1)
+    # fetch repository repository_summary
+    repository_summary: tuple[int, int] = get_repository_summary(client)
 
     for commit_alert in alert_list:  # sometimes more than one alert is attached to a commit
         commit_alert: CommitAlert
 
-        analysis_result: AnalysisResult = AnalysisResult.from_alert(*project_meta, commit_alert=commit_alert)
-
+        analysis_result: AnalysisResult = AnalysisResult.from_alert(client.project, *repository_summary, repository_summary[0] - 1,
+                                                                    commit_alert=commit_alert)
         # region logging
         logger.separator(level=LogLevel.VERBOSE)
-        logger.yellow("Analysing Alert: " + commit_alert.message, LogLevel.VERBOSE)
-        logger.yellow("Expected clone location: " + str(commit_alert.context.expected_clone_location.uniform_path),
-                      level=LogLevel.VERBOSE)
-        logger.yellow("Instance interval: " + str(analysis_result.instance_metrics.get_corrected_interval()),
-                      level=LogLevel.VERBOSE)
-        logger.yellow("Expected sibling location: " + str(commit_alert.context.expected_sibling_location.uniform_path),
-                      level=LogLevel.VERBOSE)
-        logger.yellow("Sibling interval: " + str(analysis_result.sibling_instance_metrics.get_corrected_interval()),
-                      level=LogLevel.VERBOSE)
+        logger.yellow("Analysing " + str(commit_alert))
         logger.separator(LogLevel.VERBOSE)
         # endregion
         # start analysis
@@ -107,10 +97,10 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
         analysis_step: int = 15555555_000  # milliseconds. 6 months
 
         commit_list: [Commit] = []
-        while analysis_start < summary[1]:
+        while analysis_start < repository_summary[1]:
             step = analysis_start + analysis_step
-            if step > summary[1]:
-                step = summary[1]
+            if step > repository_summary[1]:
+                step = repository_summary[1]
             # get repository data in chunks - this was to be able to write temporary results to a file
             # this is maybe unnecessary yet
             new_commits = get_repository_commits(client, analysis_start, step)
@@ -167,15 +157,7 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                 analysis_start = step + 1
                 analysis_result.analysed_until = step
                 pass
-        # region logging
-        logger.separator(level=LogLevel.DEBUG)
-        logger.white("Corrected lines:", level=LogLevel.DEBUG)
-        logger.white("Expected clone location: " + str(commit_alert.context.expected_clone_location.uniform_path), level=LogLevel.DEBUG)
-        logger.white("Instance interval: " + str(analysis_result.instance_metrics.get_corrected_interval()), level=LogLevel.DEBUG)
-        logger.white("Expected sibling location: " + str(commit_alert.context.expected_sibling_location.uniform_path), level=LogLevel.DEBUG)
-        logger.white("Sibling interval: " + str(analysis_result.sibling_instance_metrics.get_corrected_interval()), level=LogLevel.DEBUG)
-        # endregion
-        logger.white(str(analysis_result))
+        logger.white(SEPARATOR + "\n" + str(analysis_result))
         pass
 
 
@@ -183,7 +165,7 @@ def check_file(file: str, client: TeamscaleClient, commit_timestamp: int, previo
                affected_files: [FileChange], instance_metrics: InstanceMetrics) -> Affectedness:
     if is_file_affected_at_file_changes(file, affected_files):
         file_name = file.split('/')[-1]
-        logger.white(file_name + " affected at commit    : " + str(commit_timestamp), level=LogLevel.VERBOSE)
+        logger.white("{0:51}".format(file_name + " affected at commit:") + str(commit_timestamp), level=LogLevel.VERBOSE)
 
         diff_dict, link = get_diff(client, file, previous_commit_timestamp, file, commit_timestamp)
         diff_dict: dict[DiffType, DiffDescription]

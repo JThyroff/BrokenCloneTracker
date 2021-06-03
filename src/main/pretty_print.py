@@ -3,7 +3,9 @@ from datetime import datetime
 
 from colorama import Fore, Style
 
-SEPARATOR = Fore.LIGHTBLACK_EX + Style.DIM + "∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇Δ∇" + Style.RESET_ALL
+separator_width = 32
+
+SEPARATOR = Fore.LIGHTBLACK_EX + Style.DIM + separator_width * "∇Δ" + Style.RESET_ALL
 
 
 class LogLevel(enum.Enum):
@@ -19,9 +21,21 @@ class LogLevel(enum.Enum):
         return self.value <= other.value
 
 
+def stuff_text(text: str):
+    return text.replace("\n", "\n" + get_empty_prefix())
+
+
+def get_empty_prefix():
+    return len(get_prefix()) * " "
+
+
+def get_prefix():
+    return get_current_time()
+
+
 def get_current_time():
     now = datetime.now()
-    dt_string = now.strftime("[%H:%M|%S] ")
+    dt_string = now.strftime("[%H:%M|%S]  ")
     return dt_string
 
 
@@ -33,20 +47,20 @@ class MyLogger:
 
     def separator(self, level: LogLevel = LogLevel.NONE):
         if level.compare(self.LOG_LEVEL):
-            print(get_current_time() + SEPARATOR)
+            print(get_prefix() + SEPARATOR)
 
     def yellow(self, text: str, level: LogLevel = LogLevel.NONE):
         if level.compare(self.LOG_LEVEL):
-            print(get_current_time() + Fore.YELLOW + Style.DIM + text + Style.RESET_ALL)
+            print(get_prefix() + Fore.YELLOW + Style.DIM + stuff_text(text) + Style.RESET_ALL)
 
     def white(self, text: str, level: LogLevel = LogLevel.NONE):
         if level.compare(self.LOG_LEVEL):
-            print(get_current_time() + Style.RESET_ALL + text)
+            print(get_prefix() + Style.RESET_ALL + stuff_text(text))
 
     def blue(self, text: str, level: LogLevel = LogLevel.NONE):
         if level.compare(self.LOG_LEVEL):
-            print(get_current_time() + Fore.BLUE + Style.DIM + text + Style.RESET_ALL)
+            print(get_prefix() + Fore.BLUE + Style.DIM + stuff_text(text) + Style.RESET_ALL)
 
     def red(self, text: str, level: LogLevel = LogLevel.NONE):
         if level.compare(self.LOG_LEVEL):
-            print(get_current_time() + Fore.RED + Style.DIM + text + Style.RESET_ALL)
+            print(get_prefix() + Fore.RED + Style.DIM + stuff_text(text) + Style.RESET_ALL)

@@ -6,6 +6,7 @@ from portion import Interval
 
 from src.main.api.data import FileChange, DiffDescription, CloneFindingChurn, CloneFinding, CommitAlert, \
     CommitAlertContext
+from src.main.pretty_print import SEPARATOR
 
 
 class TextSectionDeletedError(Exception):
@@ -56,10 +57,11 @@ class AnalysisResult:
     clone_findings_count: int = 0
 
     def __str__(self):
-        return ("Analysis Result for: " + str(self.project) + " first commit: " + str(self.first_commit) + " most recent commit: "
-                + str(self.most_recent_commit) + " analysed until: " + str(self.analysed_until) + "\nCommit Alert: "
-                + str(self.commit_alert) + "\nCorrected instance interval:" + self.instance_metrics.get_corrected_interval()
-                + "\nCorrected sibling interval:" + self.sibling_instance_metrics.get_corrected_interval()
+        return ("Analysis Result for " + self.project + ": first commit: " + str(self.first_commit) + ", most recent commit: "
+                + str(self.most_recent_commit) + ", analysed until: " + str(self.analysed_until) + "\n" + SEPARATOR + "\n"
+                + str(self.commit_alert) + "\n" + SEPARATOR + "\nCorrected instance interval: "
+                + self.instance_metrics.get_corrected_interval()
+                + "\nCorrected sibling interval: " + self.sibling_instance_metrics.get_corrected_interval()
                 + "\nFile affected count: " + str(self.instance_metrics.file_affected_count)
                 + "\nInstance affected critical count: "
                 + str(self.instance_metrics.affected_critical_count) + "\nSibling file affected count: "

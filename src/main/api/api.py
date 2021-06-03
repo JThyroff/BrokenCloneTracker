@@ -57,9 +57,9 @@ def get_commit_alerts(client: TeamscaleClient, commit_timestamps: [int]) -> dict
     url = get_project_api_service_url(client, "commit-alerts")
     parameters = {"commit": commit_timestamps}
 
-    logger.separator(level=LogLevel.VERBOSE)
+    logger.separator(level=LogLevel.DEBUG)
     logger.yellow("Getting commit alerts for timestamp " + str(commit_timestamps) + " at URL: " + str(url),
-                  level=LogLevel.VERBOSE)
+                  level=LogLevel.DEBUG)
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
@@ -133,13 +133,14 @@ def get_diff(client: TeamscaleClient, left_file: str, left_commit_timestamp: int
 
 def get_repository_summary(client: TeamscaleClient) -> tuple[int, int]:
     """get repository summary: means start commit and most recent commit timestamp."""
-    logger.white("Getting repository summary", LogLevel.VERBOSE)
+    logger.white("Getting repository summary:", LogLevel.VERBOSE)
     url = get_project_api_service_url(client, "repository-summary")
     parameters = {"only-first-and-last": True}
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
-    logger.white(json.dumps(parsed, indent=4, sort_keys=True), level=LogLevel.VERBOSE)
+    logger.white("First commit: " + str(parsed['firstCommit']) + ", Most recent commit: " + str(parsed['mostRecentCommit']),
+                 level=LogLevel.VERBOSE)
     return parsed['firstCommit'], parsed['mostRecentCommit']
 
 

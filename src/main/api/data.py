@@ -16,13 +16,6 @@ class Commit(object):
         self.commit_type = commit_type
         self.parent_commits = parent_commits
 
-    @classmethod
-    def from_json(cls, json):
-        if "parentCommits" in json:
-            return Commit(json['branchName'], json['timestamp'], json['type'], json['parentCommits'])
-        else:
-            return Commit(json['branchName'], json['timestamp'], json['type'])
-
     def __eq__(self, other):
         if not isinstance(other, Commit):
             return NotImplemented
@@ -34,6 +27,13 @@ class Commit(object):
 
     def __hash__(self):
         return hash((self.branch, self.timestamp))
+
+    @classmethod
+    def from_json(cls, json):
+        if "parentCommits" in json:
+            return Commit(json['branchName'], json['timestamp'], json['type'], json['parentCommits'])
+        else:
+            return Commit(json['branchName'], json['timestamp'], json['type'])
 
 
 class TextRegionLocation(object):
@@ -48,14 +48,7 @@ class TextRegionLocation(object):
         self.uniform_path = uniform_path  # also file path ?
 
     def __str__(self):
-        return "Location: " + self.uniform_path + " [" + str(self.raw_start_line) + "-" + str(self.raw_end_line) + "]"
-
-    @classmethod
-    def from_json(cls, json):
-        return TextRegionLocation(json['location'], json['rawEndLine'],
-                                  json['rawEndOffset'], json['rawStartLine'], json['rawStartOffset'],
-                                  json['type'],
-                                  json['uniformPath'])
+        return "Location: " + self.uniform_path + " " + self.get_interval()
 
     def __eq__(self, other):
         if not isinstance(other, TextRegionLocation):
@@ -67,6 +60,16 @@ class TextRegionLocation(object):
                    and self.raw_end_offset == other.raw_end_offset and self.raw_start_line == other.raw_start_line \
                    and self.raw_start_offset == other.raw_start_offset and self.location_type == other.location_type \
                    and self.uniform_path == other.uniform_path
+
+    def get_interval(self):
+        return "[" + str(self.raw_start_line) + "-" + str(self.raw_end_line) + ")"
+
+    @classmethod
+    def from_json(cls, json):
+        return TextRegionLocation(json['location'], json['rawEndLine'],
+                                  json['rawEndOffset'], json['rawStartLine'], json['rawStartOffset'],
+                                  json['type'],
+                                  json['uniformPath'])
 
 
 @auto_str
@@ -80,13 +83,6 @@ class CommitAlertContext(object):
         self.old_clone_location = old_clone_location
         self.removed_clone_id = removed_clone_id
 
-    @classmethod
-    def from_json(cls, json):
-        return CommitAlertContext(TextRegionLocation.from_json(json['expectedCloneLocation']),
-                                  TextRegionLocation.from_json(json['expectedSiblingLocation']),
-                                  TextRegionLocation.from_json(json['oldCloneLocation']),
-                                  json['removedCloneId'])
-
     def __eq__(self, other):
         if not isinstance(other, CommitAlertContext):
             return NotImplemented
@@ -98,16 +94,18 @@ class CommitAlertContext(object):
                    and self.old_clone_location == other.old_clone_location \
                    and self.removed_clone_id == other.removed_clone_id
 
+    @classmethod
+    def from_json(cls, json):
+        return CommitAlertContext(TextRegionLocation.from_json(json['expectedCloneLocation']),
+                                  TextRegionLocation.from_json(json['expectedSiblingLocation']),
+                                  TextRegionLocation.from_json(json['oldCloneLocation']),
+                                  json['removedCloneId'])
 
-@auto_str
+
 class CommitAlert(object):
     def __init__(self, context: CommitAlertContext, message: str):
         self.context = context
         self.message = message
-
-    @classmethod
-    def from_json(cls, json):
-        return CommitAlert(CommitAlertContext.from_json(json['context']), json['message'])
 
     def __eq__(self, other):
         if not isinstance(other, CommitAlert):
@@ -117,6 +115,16 @@ class CommitAlert(object):
         else:
             return self.context == other.context and self.message == other.message
 
+    def __str__(self):
+        return ("Commit Alert: " + self.message + "\nExpected clone location: " + self.context.expected_clone_location.uniform_path
+                + "\nInstance interval: " + self.context.expected_clone_location.get_interval() + "\nExpected sibling location: " +
+                self.context.expected_sibling_location.uniform_path + "\nSibling interval: "
+                + self.context.expected_sibling_location.get_interval())
+
+    @classmethod
+    def from_json(cls, json):
+        return CommitAlert(CommitAlertContext.from_json(json['context']), json['message'])
+
 
 @auto_str
 class FileChange(object):
@@ -124,10 +132,6 @@ class FileChange(object):
         self.uniform_path = uniform_path
         self.change_type = change_type
         self.commit = commit
-
-    @classmethod
-    def from_json(cls, json):
-        return FileChange(json['uniformPath'], json['changeType'], Commit.from_json(json['commit']))
 
     def __eq__(self, other):
         if not isinstance(other, FileChange):
@@ -137,6 +141,10 @@ class FileChange(object):
         else:
             return self.uniform_path == other.uniform_path and self.change_type == other.change_type \
                    and self.commit == other.commit
+
+    @classmethod
+    def from_json(cls, json):
+        return FileChange(json['uniformPath'], json['changeType'], Commit.from_json(json['commit']))
 
 
 class DiffType(Enum):
@@ -179,12 +187,6 @@ class DiffDescription:
         assert len(self.left_change_line_intervals) == len(self.right_change_line_intervals)
         # assert len(self.left_change_region_intervals) == len(self.right_change_region_intervals)
 
-    @classmethod
-    def from_json(cls, json):
-        return DiffDescription(DiffType.from_json(json['name']), json['leftChangeLines'], json['leftChangeRegions'],
-                               json["rightChangeLines"],
-                               json["rightChangeRegions"])
-
     def __eq__(self, other):
         if not isinstance(other, DiffDescription):
             return NotImplemented
@@ -196,6 +198,12 @@ class DiffDescription:
                    and self.right_change_lines == other.right_change_lines \
                    and self.right_change_regions == other.right_change_regions
 
+    @classmethod
+    def from_json(cls, json):
+        return DiffDescription(DiffType.from_json(json['name']), json['leftChangeLines'], json['leftChangeRegions'],
+                               json["rightChangeLines"],
+                               json["rightChangeRegions"])
+
 
 @auto_str
 class CloneProperties:
@@ -203,10 +211,6 @@ class CloneProperties:
         self.instances = instances
         self.length = length
         self.gaps = gaps
-
-    @classmethod
-    def from_json(cls, json):
-        return CloneProperties(json["Instances"], json["Length"], json["Gaps"])
 
     def __eq__(self, other):
         other: CloneProperties
@@ -216,6 +220,10 @@ class CloneProperties:
             return True
         else:
             return self.instances == other.instances and self.length == other.length and self.gaps == other.gaps
+
+    @classmethod
+    def from_json(cls, json):
+        return CloneProperties(json["Instances"], json["Length"], json["Gaps"])
 
 
 class CloneFinding:
@@ -243,6 +251,22 @@ class CloneFinding:
             to_return += "Sibling: " + str(sibling) + "\n"
         return to_return[:-1] + "}"
 
+    def __eq__(self, other):
+        if not isinstance(other, CloneFinding):
+            return NotImplemented
+        elif self is other:
+            return True
+        else:
+            other: CloneFinding
+            return self.group_name == other.group_name and self.category_name == other.category_name \
+                   and self.message == other.message and self.location == other.location \
+                   and self.finding_id == other.finding_id and self.birth_commit == other.birth_commit \
+                   and self.death_commit == other.death_commit \
+                   and self.assessment == other.assessment \
+                   and self.sibling_locations == other.sibling_locations \
+                   and self.properties == other.properties and self.analysis_timestamp == other.analysis_timestamp \
+                   and self.type_id == other.type_id
+
     def get_finding_link(self, client: TeamscaleClient):
         return client.url + "/findings.html#details/" + client.project + "/?id=" + self.finding_id
 
@@ -260,22 +284,6 @@ class CloneFinding:
                             death_commit, json["assessment"], sibling_locations,
                             CloneProperties.from_json(json["properties"]), json["analysisTimestamp"],
                             json["typeId"])
-
-    def __eq__(self, other):
-        if not isinstance(other, CloneFinding):
-            return NotImplemented
-        elif self is other:
-            return True
-        else:
-            other: CloneFinding
-            return self.group_name == other.group_name and self.category_name == other.category_name \
-                   and self.message == other.message and self.location == other.location \
-                   and self.finding_id == other.finding_id and self.birth_commit == other.birth_commit \
-                   and self.death_commit == other.death_commit \
-                   and self.assessment == other.assessment \
-                   and self.sibling_locations == other.sibling_locations \
-                   and self.properties == other.properties and self.analysis_timestamp == other.analysis_timestamp \
-                   and self.type_id == other.type_id
 
 
 class CloneFindingChurn:
@@ -309,6 +317,19 @@ class CloneFindingChurn:
         if self.is_empty():
             to_return = to_return[:-1] + " NO  CHURN"
         return to_return
+
+    def __eq__(self, other):
+        if not isinstance(other, CloneFindingChurn):
+            return NotImplemented
+        elif self is other:
+            return True
+        else:
+            other: CloneFindingChurn
+            return self.commit == other.commit and self.added_findings == other.added_findings \
+                   and self.findings_added_in_branch == other.findings_added_in_branch \
+                   and self.findings_in_changed_code == other.findings_in_changed_code \
+                   and self.removed_findings == other.removed_findings \
+                   and self.findings_removed_in_branch == other.findings_removed_in_branch
 
     def get_finding_links(self, client: TeamscaleClient) -> [str]:
         """returns a list of weblinks to the findings"""
@@ -350,16 +371,3 @@ class CloneFindingChurn:
                 findings_removed_in_branch.append(CloneFinding.from_json(finding))
         return CloneFindingChurn(Commit.from_json(json["commit"]), added_findings, findings_added_in_branch,
                                  findings_in_changed_code, removed_findings, findings_removed_in_branch)
-
-    def __eq__(self, other):
-        if not isinstance(other, CloneFindingChurn):
-            return NotImplemented
-        elif self is other:
-            return True
-        else:
-            other: CloneFindingChurn
-            return self.commit == other.commit and self.added_findings == other.added_findings \
-                   and self.findings_added_in_branch == other.findings_added_in_branch \
-                   and self.findings_in_changed_code == other.findings_in_changed_code \
-                   and self.removed_findings == other.removed_findings \
-                   and self.findings_removed_in_branch == other.findings_removed_in_branch
