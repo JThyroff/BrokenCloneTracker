@@ -116,7 +116,6 @@ def get_diff(client: TeamscaleClient, left_file: str, left_commit_timestamp: int
     logger.white("            and right: " + right_file + " at commit " + str(right_commit_timestamp),
                  level=LogLevel.DEBUG)
     link = client.url + "/compare.html#/" + left + "#&#" + right
-    logger.blue(link, level=LogLevel.VERBOSE)
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
@@ -129,7 +128,7 @@ def get_diff(client: TeamscaleClient, left_file: str, left_commit_timestamp: int
         d: DiffDescription = DiffDescription.from_json(e)
         diff_dict.update({d.name: d})
 
-    return diff_dict
+    return diff_dict, link
 
 
 def get_repository_summary(client: TeamscaleClient) -> tuple[int, int]:

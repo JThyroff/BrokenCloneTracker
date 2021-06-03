@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import Enum
 
 import portion
@@ -5,6 +6,10 @@ from portion import Interval
 
 from src.main.api.data import FileChange, DiffDescription, CloneFindingChurn, CloneFinding, CommitAlert, \
     CommitAlertContext
+
+
+class TextSectionDeletedError(Exception):
+    pass
 
 
 class Affectedness(Enum):
@@ -19,21 +24,32 @@ class Affectedness(Enum):
         return self.value * other.value
 
 
+@dataclass
+class FileMetrics:
+    corrected_instance_start_line: int
+    corrected_instance_end_line: int
+    file_affected_count: int
+    instance_affected_count: int
+    instance_deleted: bool
+
+
 class AnalysisResult:
     """A class representing one analysis result"""
 
     def __init__(self, project: str, first_commit: int, most_recent_commit: int, analysed_until: int,
                  commit_alert: CommitAlert,
-                 corrected_clone_start_line: int, corrected_clone_end_line: int,
+                 corrected_instance_start_line: int, corrected_instance_end_line: int,
                  corrected_sibling_start_line: int, corrected_sibling_end_line: int,
                  file_affected_count: int = 0,
-                 file_affected_critical_count: int = 0,
-                 sibling_affected_count: int = 0,
-                 sibling_affected_critical_count: int = 0,
+                 instance_affected_critical_count: int = 0,
+                 sibling_file_affected_count: int = 0,
+                 sibling_instance_affected_critical_count: int = 0,
+                 instance_deleted: bool = False,
+                 sibling_deleted: bool = False,
                  one_file_affected_count: int = 0,
                  both_files_affected_count: int = 0,
-                 one_file_affected_critical_count: int = 0,
-                 both_files_affected_critical_count: int = 0,
+                 one_instance_affected_critical_count: int = 0,
+                 both_instances_affected_critical_count: int = 0,
                  clone_findings_count: int = 0):
         # project meta
         self.project = project
@@ -42,20 +58,23 @@ class AnalysisResult:
         self.analysed_until = analysed_until
         self.commit_alert = commit_alert
         # corrected line intervals
-        self.corrected_clone_start_line = corrected_clone_start_line
-        self.corrected_clone_end_line = corrected_clone_end_line
+        self.corrected_instance_start_line = corrected_instance_start_line
+        self.corrected_instance_end_line = corrected_instance_end_line
         self.corrected_sibling_start_line = corrected_sibling_start_line
         self.corrected_sibling_end_line = corrected_sibling_end_line
         # how often a file was affected by a commit and how often it was affected in the relevant text passage
         self.file_affected_count = file_affected_count
-        self.file_affected_critical_count = file_affected_critical_count
-        self.sibling_affected_count = sibling_affected_count
-        self.sibling_affected_critical_count = sibling_affected_critical_count
+        self.instance_affected_critical_count = instance_affected_critical_count
+        self.sibling_file_affected_count = sibling_file_affected_count
+        self.sibling_instance_affected_critical_count = sibling_instance_affected_critical_count
+        #
+        self.instance_deleted = instance_deleted
+        self.sibling_instance_deleted = sibling_deleted
         # how often only one file was affected by a commit or how often both - and how often it was critical
         self.one_file_affected_count = one_file_affected_count
         self.both_files_affected_count = both_files_affected_count
-        self.one_file_affected_critical_count = one_file_affected_critical_count
-        self.both_files_affected_critical_count = both_files_affected_critical_count
+        self.one_instance_affected_critical_count = one_instance_affected_critical_count
+        self.both_instances_affected_critical_count = both_instances_affected_critical_count
         # later introduced clone findings where both files are affected
         # TODO? Lacking of a critical classification for introduced clones. Happens not that often
         self.clone_findings_count = clone_findings_count
@@ -63,37 +82,38 @@ class AnalysisResult:
     def __str__(self):
         return ("Analysis Result for: " + str(self.project) + " first commit: " + str(self.first_commit) + " most recent commit: "
                 + str(self.most_recent_commit) + " analysed until: " + str(self.analysed_until) + "\nCommit Alert: "
-                + str(self.commit_alert) + "\nCorrected clone interval: [" + str(self.corrected_clone_start_line) + ","
-                + str(self.corrected_clone_end_line) + ")\nCorrected sibling interval: [" + str(self.corrected_sibling_start_line) + ","
+                + str(self.commit_alert) + "\nCorrected instance interval: [" + str(self.corrected_instance_start_line) + ","
+                + str(self.corrected_instance_end_line) + ")\nCorrected sibling interval: [" + str(self.corrected_sibling_start_line) + ","
                 + str(self.corrected_sibling_end_line) + ")\nFile affected count: " + str(self.file_affected_count)
-                + "\nFile affected critical count: " + str(self.file_affected_critical_count) + "\nSibling affected count: "
-                + str(self.sibling_affected_count) + "\nSibling affected critical count: " + str(self.sibling_affected_critical_count)
+                + "\nInstance affected critical count: " + str(self.instance_affected_critical_count) + "\nSibling file affected count: "
+                + str(self.sibling_file_affected_count) + "\nSibling instance affected critical count: " + str(
+                    self.sibling_instance_affected_critical_count)
                 + "\nOne file affected count: " + str(self.one_file_affected_count) + "\nBoth files affected count: "
                 + str(self.both_files_affected_count) + "\nOne file affected critical count: "
-                + str(self.one_file_affected_critical_count) + "\nBoth files affected critical count: "
-                + str(self.both_files_affected_critical_count) + "\nRelevant clone findings count: " + str(self.clone_findings_count))
+                + str(self.one_instance_affected_critical_count) + "\nBoth files affected critical count: "
+                + str(self.both_instances_affected_critical_count) + "\nRelevant clone findings count: " + str(self.clone_findings_count))
 
-    def set_file_args(self, corrected_clone_start_line, corrected_clone_end_line, file_affected_count,
+    def set_file_args(self, corrected_instance_start_line, corrected_instance_end_line, file_affected_count,
                       file_affected_critical_count):
-        self.corrected_clone_start_line = corrected_clone_start_line
-        self.corrected_clone_end_line = corrected_clone_end_line
+        self.corrected_instance_start_line = corrected_instance_start_line
+        self.corrected_instance_end_line = corrected_instance_end_line
         self.file_affected_count = file_affected_count
-        self.file_affected_critical_count = file_affected_critical_count
+        self.instance_affected_critical_count = file_affected_critical_count
 
     def set_sibling_args(self, corrected_sibling_start_line, corrected_sibling_end_line, sibling_affected_count,
                          sibling_affected_critical_count):
         self.corrected_sibling_start_line = corrected_sibling_start_line
         self.corrected_sibling_end_line = corrected_sibling_end_line
-        self.sibling_affected_count = sibling_affected_count
-        self.sibling_affected_critical_count = sibling_affected_critical_count
+        self.sibling_file_affected_count = sibling_affected_count
+        self.sibling_instance_affected_critical_count = sibling_affected_critical_count
 
     def get_file_args(self):
-        return [self.corrected_clone_start_line, self.corrected_clone_end_line, self.file_affected_count,
-                self.file_affected_critical_count]
+        return [self.corrected_instance_start_line, self.corrected_instance_end_line, self.file_affected_count,
+                self.instance_affected_critical_count]
 
     def get_sibling_args(self):
-        return [self.corrected_sibling_start_line, self.corrected_sibling_end_line, self.sibling_affected_count,
-                self.sibling_affected_critical_count]
+        return [self.corrected_sibling_start_line, self.corrected_sibling_end_line, self.sibling_file_affected_count,
+                self.sibling_instance_affected_critical_count]
 
     @staticmethod
     def from_alert(project: str, first_commit: int, most_recent_commit: int, analysed_until: int,
@@ -113,20 +133,22 @@ class AnalysisResult:
             return True
         else:
             other: AnalysisResult
-            return self.project == other.project \
-                   and self.first_commit == other.first_commit \
-                   and self.most_recent_commit == other.most_recent_commit \
-                   and self.analysed_until == other.analysed_until \
-                   and self.commit_alert == other.commit_alert \
-                   and self.file_affected_count == other.file_affected_count \
-                   and self.file_affected_critical_count == other.file_affected_critical_count \
-                   and self.sibling_affected_count == other.sibling_affected_count \
-                   and self.sibling_affected_critical_count == other.sibling_affected_critical_count \
-                   and self.one_file_affected_count == other.one_file_affected_count \
-                   and self.both_files_affected_count == other.both_files_affected_count \
-                   and self.one_file_affected_critical_count == other.one_file_affected_critical_count \
-                   and self.both_files_affected_critical_count == other.both_files_affected_critical_count \
-                   and self.clone_findings_count == other.clone_findings_count
+            return (self.project == other.project
+                    and self.first_commit == other.first_commit
+                    and self.most_recent_commit == other.most_recent_commit
+                    and self.analysed_until == other.analysed_until
+                    and self.commit_alert == other.commit_alert
+                    and self.file_affected_count == other.file_affected_count
+                    and self.instance_affected_critical_count == other.instance_affected_critical_count
+                    and self.sibling_file_affected_count == other.sibling_file_affected_count
+                    and self.sibling_instance_affected_critical_count == other.sibling_instance_affected_critical_count
+                    and self.instance_deleted == other.instance_deleted
+                    and self.sibling_instance_deleted == other.sibling_instance_deleted
+                    and self.one_file_affected_count == other.one_file_affected_count
+                    and self.both_files_affected_count == other.both_files_affected_count
+                    and self.one_instance_affected_critical_count == other.one_instance_affected_critical_count
+                    and self.both_instances_affected_critical_count == other.both_instances_affected_critical_count
+                    and self.clone_findings_count == other.clone_findings_count)
 
 
 def is_file_affected_at_file_changes(file_uniform_path: str, affected_files: [FileChange]) -> bool:
@@ -187,6 +209,7 @@ def correct_lines(loc_start_line: int, loc_end_line: int, diff_desc: DiffDescrip
     :return the corrected line number respecting the diff"""
     if "line-based" not in diff_desc.name.value:
         raise ValueError('DiffDescription should be a kind of line based diff.')
+    # the Interval which start and end location should be corrected
     loc_interval: Interval = portion.closedopen(loc_start_line, loc_end_line)
 
     for left_interval, right_interval in zip(diff_desc.left_change_line_intervals,
@@ -205,6 +228,12 @@ def correct_lines(loc_start_line: int, loc_end_line: int, diff_desc: DiffDescrip
         elif left_interval > loc_interval:
             # return cause intervals are sorted -> No important intervals will follow
             return loc_start_line, loc_end_line
+        # below are edge cases which may introduce errors
+        elif loc_interval in left_interval:  # location is entirely in the modified interval. Check for deletion
+            if right_length == 0:  # the relevant section was deleted
+                raise TextSectionDeletedError("The relevant text section was deleted with this diff.")
+            else:
+                raise NotImplementedError("I currently do not know how to handle this special case")
         elif left_interval <= loc_interval:
             loc_end_line = loc_end_line + x
         elif left_interval >= loc_interval:

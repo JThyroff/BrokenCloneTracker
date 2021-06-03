@@ -8,7 +8,7 @@ from teamscale_client import TeamscaleClient
 from defintions import get_alert_file_name, get_project_dir
 from src.main.analysis.analysis_utils import is_file_affected_at_file_changes, are_left_lines_affected_at_diff, \
     correct_lines, \
-    filter_clone_finding_churn_by_file, Affectedness, AnalysisResult
+    filter_clone_finding_churn_by_file, Affectedness, AnalysisResult, TextSectionDeletedError
 from src.main.api.api import get_repository_summary, get_repository_commits, get_commit_alerts, get_affected_files, \
     get_diff, get_clone_finding_churn
 from src.main.api.data import CommitAlert, Commit, FileChange, DiffType, DiffDescription, CloneFindingChurn
@@ -94,9 +94,9 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
         logger.yellow("Analysing Alert: " + commit_alert.message, LogLevel.VERBOSE)
         logger.yellow("Expected clone location: " + str(commit_alert.context.expected_clone_location.uniform_path),
                       level=LogLevel.VERBOSE)
-        logger.yellow("Clone.raw_start_line: " + str(analysis_result.corrected_clone_start_line),
+        logger.yellow("Clone.raw_start_line: " + str(analysis_result.corrected_instance_start_line),
                       level=LogLevel.VERBOSE)
-        logger.yellow("Clone.raw_end_line: " + str(analysis_result.corrected_clone_end_line),
+        logger.yellow("Clone.raw_end_line: " + str(analysis_result.corrected_instance_end_line),
                       level=LogLevel.VERBOSE)
         logger.yellow("Expected sibling location: " + str(commit_alert.context.expected_sibling_location.uniform_path),
                       level=LogLevel.VERBOSE)
@@ -127,15 +127,26 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                 affected_files: [FileChange] = get_affected_files(client, commit.timestamp)
                 project_meta = (client, commit.timestamp, previous_commit_timestamp, affected_files)
                 # check file
-                file_affectedness: Affectedness
-                (file_affectedness, *file_args) = check_file(expected_file, *project_meta, *analysis_result.get_file_args())
-                analysis_result.set_file_args(*file_args)
-
+                file_affectedness: Affectedness = Affectedness.NOT_AFFECTED
+                if not analysis_result.instance_deleted:
+                    try:
+                        (file_affectedness, *file_args) = check_file(expected_file, *project_meta, *analysis_result.get_file_args())
+                        analysis_result.set_file_args(*file_args)
+                    except TextSectionDeletedError as e:
+                        analysis_result.instance_deleted = True
+                        logger.red("Instance deleted.", LogLevel.VERBOSE)
+                        logger.blue(str(e), LogLevel.VERBOSE)
                 # check sibling
-                sibling_affectedness: Affectedness
-                (sibling_affectedness, *sibling_args) = check_file(expected_sibling, *project_meta,
-                                                                   *analysis_result.get_sibling_args())
-                analysis_result.set_sibling_args(*sibling_args)
+                sibling_affectedness: Affectedness = Affectedness.NOT_AFFECTED
+                if not analysis_result.sibling_instance_deleted:
+                    try:
+                        (sibling_affectedness, *sibling_args) = check_file(expected_sibling, *project_meta,
+                                                                           *analysis_result.get_sibling_args())
+                        analysis_result.set_sibling_args(*sibling_args)
+                    except TextSectionDeletedError as e:
+                        analysis_result.sibling_instance_deleted = True
+                        logger.red("Sibling deleted.", LogLevel.VERBOSE)
+                        logger.blue(str(e), LogLevel.VERBOSE)
                 # get clone finding churn for commit: filter for clones where both files are affected
                 clone_finding_churn: CloneFindingChurn = get_clone_finding_churn(client, commit.timestamp)
                 filter_clone_finding_churn_by_file([expected_file, expected_sibling], clone_finding_churn)
@@ -146,10 +157,10 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
 
                 affectedness_product: int = file_affectedness * sibling_affectedness
                 if affectedness_product == 9:
-                    analysis_result.both_files_affected_critical_count += 1
+                    analysis_result.both_instances_affected_critical_count += 1
                     logger.red("-> Both affected critical", LogLevel.VERBOSE)
                 elif affectedness_product == 3 or affectedness_product == 6:
-                    analysis_result.one_file_affected_critical_count += 1
+                    analysis_result.one_instance_affected_critical_count += 1
                     logger.red("-> One affected critical", LogLevel.VERBOSE)
                 elif affectedness_product == 4:
                     analysis_result.both_files_affected_count += 1
@@ -166,20 +177,12 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
         # region logging
         logger.separator(level=LogLevel.DEBUG)
         logger.white("Corrected lines:", level=LogLevel.DEBUG)
-        logger.white(
-            "Expected clone location: " + str(commit_alert.context.expected_clone_location.uniform_path),
-            level=LogLevel.DEBUG)
-        logger.white("Clone.start_line (corrected): " + str(analysis_result.corrected_clone_start_line),
-                     level=LogLevel.DEBUG)
-        logger.white("Clone.end_line (corrected): " + str(analysis_result.corrected_clone_end_line),
-                     level=LogLevel.DEBUG)
-        logger.white(
-            "Expected sibling location: " + str(commit_alert.context.expected_sibling_location.uniform_path),
-            level=LogLevel.DEBUG)
-        logger.white("Sibling.start_line (corrected): " + str(analysis_result.corrected_sibling_start_line),
-                     level=LogLevel.DEBUG)
-        logger.white("Sibling.end_line (corrected): " + str(analysis_result.corrected_sibling_end_line),
-                     level=LogLevel.DEBUG)
+        logger.white("Expected clone location: " + str(commit_alert.context.expected_clone_location.uniform_path), level=LogLevel.DEBUG)
+        logger.white("Instance.start_line (corrected): " + str(analysis_result.corrected_instance_start_line), level=LogLevel.DEBUG)
+        logger.white("Instance.end_line (corrected): " + str(analysis_result.corrected_instance_end_line), level=LogLevel.DEBUG)
+        logger.white("Expected sibling location: " + str(commit_alert.context.expected_sibling_location.uniform_path), level=LogLevel.DEBUG)
+        logger.white("Sibling instance.start_line (corrected): " + str(analysis_result.corrected_sibling_start_line), level=LogLevel.DEBUG)
+        logger.white("Sibling instance.end_line (corrected): " + str(analysis_result.corrected_sibling_end_line), level=LogLevel.DEBUG)
         # endregion
         logger.white(str(analysis_result))
         pass
@@ -193,16 +196,23 @@ def check_file(file: str, client: TeamscaleClient, commit_timestamp: int, previo
         file_name = file.split('/')[-1]
         logger.white(file_name + " affected at commit    : " + str(commit_timestamp), level=LogLevel.VERBOSE)
 
-        diff_dict: dict[DiffType, DiffDescription] = get_diff(client, file, previous_commit_timestamp, file, commit_timestamp)
-        file_start_line, file_end_line = correct_lines(file_start_line, file_end_line, diff_dict.get(DiffType.LINE_BASED))
+        diff_dict, link = get_diff(client, file, previous_commit_timestamp, file, commit_timestamp)
+        diff_dict: dict[DiffType, DiffDescription]
+        link: str
+        try:
+            file_start_line, file_end_line = correct_lines(file_start_line, file_end_line, diff_dict.get(DiffType.LINE_BASED))
+        except Exception as e:
+            raise type(e)(link)
 
         if are_left_lines_affected_at_diff(file_start_line, file_end_line, diff_dict.get(DiffType.TOKEN_BASED)):
             file_affected_critical_count += 1
             logger.red(file_name + " affected critical", LogLevel.VERBOSE)
+            logger.blue(link, LogLevel.VERBOSE)
             return Affectedness.AFFECTED_CRITICAL, file_start_line, file_end_line, file_affected_count, file_affected_critical_count
         else:
             file_affected_count += 1
             logger.white(file_name + " is not affected critical", LogLevel.DEBUG)
+            logger.blue(link, LogLevel.DEBUG)
             return Affectedness.AFFECTED_BY_COMMIT, file_start_line, file_end_line, file_affected_count, file_affected_critical_count
     else:
         return Affectedness.NOT_AFFECTED, file_start_line, file_end_line, file_affected_count, file_affected_critical_count
