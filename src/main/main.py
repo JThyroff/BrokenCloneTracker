@@ -1,3 +1,4 @@
+import time
 import traceback
 
 import matplotlib.pyplot as plt
@@ -31,6 +32,7 @@ def plot_results(successful_runs, failed_runs):
     printer.white(", ".join(str(entry[0]) for entry in successful_runs))
     printer.blue("Failed runs: ")
     printer.red(", ".join(str(commit_timestamp) for commit_timestamp in failed_runs))
+    
     labels = 'Frogs', 'Hogs', 'Dogs', 'Logs'
     sizes = [15, 30, 45, 10]
     explode = (0, 0.1, 0, 0)  # only "explode" the 2nd slice (i.e. 'Hogs')
@@ -48,6 +50,7 @@ def run_analysis(client: TeamscaleClient):
     alert_file: AlertFile = update_filtered_alert_commits(client, overwrite=False)
     printer.separator(LogLevel.INFO)
     printer.blue("Alert commit count: " + str(len(alert_file.alert_commit_list)), LogLevel.INFO)
+    start = time.process_time()
 
     successful_analysis_count = 0
     successful_runs = []
@@ -63,6 +66,7 @@ def run_analysis(client: TeamscaleClient):
             traceback.print_exc()
             printer.red("ERROR")
             failed_runs.append(alert_commit.timestamp)
+    printer.blue("Analysis took: " + str(time.process_time() - start) + " time.", LogLevel.INFO)
     printer.blue("Alert commit count: " + str(len(alert_file.alert_commit_list)), LogLevel.INFO)
     printer.blue("Successful analysis count: " + str(successful_analysis_count))
 

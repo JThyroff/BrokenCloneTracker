@@ -98,6 +98,12 @@ def read_alert_file(client: TeamscaleClient, overwrite=False):
     return file_name, alert_file
 
 
+def read_from_file(file_name: str):
+    with open(file_name, "r") as file:
+        file: TextIO
+        return jsonpickle.decode(file.read())
+
+
 def write_to_file(file_name: str, content):
     with open(file_name, "w") as file:
         file.write(jsonpickle.encode(content))
