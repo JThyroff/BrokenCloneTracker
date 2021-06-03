@@ -1,3 +1,5 @@
+import os
+import traceback
 from json import JSONDecodeError
 from pathlib import Path
 from typing import TextIO
@@ -13,9 +15,9 @@ from src.main.api.api import get_repository_summary, get_repository_commits, get
     get_diff, get_clone_finding_churn
 from src.main.api.data import CommitAlert, Commit, FileChange, DiffType, DiffDescription, CloneFindingChurn
 from src.main.persistence import AlertFile
-from src.main.pretty_print import MyLogger, LogLevel, SEPARATOR
+from src.main.pretty_print import MyPrinter, LogLevel, SEPARATOR
 
-logger: MyLogger = MyLogger(LogLevel.DEBUG)
+printer: MyPrinter = MyPrinter(LogLevel.INFO)
 
 
 def create_project_dir(project: str):
@@ -23,14 +25,17 @@ def create_project_dir(project: str):
     Path(get_project_dir(project)).mkdir(parents=True, exist_ok=True)
 
 
-def update_filtered_alert_commits(client: TeamscaleClient):
+def update_filtered_alert_commits(client: TeamscaleClient, overwrite=False) -> AlertFile:
     """This function updates the alert commit of the project in the corresponding file.
     It reads the current alert file and compares appends new relevant commits from the server."""
-    logger.yellow("Updating filtered alert commits...", level=LogLevel.INFO)
+    printer.yellow("Updating filtered alert commits... Overwrite = " + str(overwrite), level=LogLevel.INFO)
     file_name: str = get_alert_file_name(client.project)
     # create structure if non-existent
     create_project_dir(project=client.project)
     summary: tuple[int, int] = get_repository_summary(client)
+
+    if overwrite:
+        os.remove(file_name)
 
     alert_file: AlertFile
     try:
@@ -49,6 +54,7 @@ def update_filtered_alert_commits(client: TeamscaleClient):
                 # update most recent commit date
                 alert_file.most_recent_commit = summary[1]
             except JSONDecodeError:
+                # if error occurs while decoding -> fetch all data from repo
                 alert_file = AlertFile.from_summary(client.project, summary)
 
     # start analysis
@@ -63,14 +69,15 @@ def update_filtered_alert_commits(client: TeamscaleClient):
         with open(file_name, "w") as file:
             file.write(jsonpickle.encode(alert_file))
         analysis_start = step + 1
-        pass
+
+    return alert_file
 
 
 def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: int):
     """Analyzes one given alert commit. This function scans all commits after the given timestamp for relevant changes
     in the code base."""
-    logger.yellow("Analysing one alert commit...", level=LogLevel.INFO)
-    logger.white("Timestamp : " + str(alert_commit_timestamp), level=LogLevel.INFO)
+    printer.yellow("Analysing one alert commit...", level=LogLevel.INFO)
+    printer.white("Timestamp : " + str(alert_commit_timestamp), level=LogLevel.INFO)
 
     alerts: dict[Commit, [CommitAlert]] = get_commit_alerts(client, alert_commit_timestamp)
 
@@ -88,9 +95,9 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
         analysis_result: AnalysisResult = AnalysisResult.from_alert(client.project, *repository_summary, repository_summary[0] - 1,
                                                                     commit_alert=commit_alert)
         # region logging
-        logger.separator(level=LogLevel.VERBOSE)
-        logger.yellow("Analysing " + str(commit_alert))
-        logger.separator(LogLevel.VERBOSE)
+        printer.separator(level=LogLevel.VERBOSE)
+        printer.yellow("Analysing " + str(commit_alert))
+        printer.separator(LogLevel.VERBOSE)
         # endregion
         # start analysis
         analysis_start: int = alert_commit_timestamp + 1
@@ -119,8 +126,8 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                         file_affectedness = check_file(expected_file, *project_meta, analysis_result.instance_metrics)
                     except TextSectionDeletedError as e:
                         analysis_result.instance_metrics.deleted = True
-                        logger.red("Instance deleted.", LogLevel.VERBOSE)
-                        logger.blue(str(e), LogLevel.VERBOSE)
+                        printer.red("Instance deleted.", LogLevel.INFO)
+                        printer.blue(str(e), LogLevel.INFO)
                 # check sibling
                 sibling_affectedness: Affectedness = Affectedness.NOT_AFFECTED
                 if not analysis_result.sibling_instance_metrics.deleted:
@@ -128,36 +135,36 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                         sibling_affectedness = check_file(expected_sibling, *project_meta, analysis_result.sibling_instance_metrics)
                     except TextSectionDeletedError as e:
                         analysis_result.sibling_instance_metrics.deleted = True
-                        logger.red("Sibling deleted.", LogLevel.VERBOSE)
-                        logger.blue(str(e), LogLevel.VERBOSE)
+                        printer.red("Sibling deleted.", LogLevel.INFO)
+                        printer.blue(str(e), LogLevel.INFO)
                 # get clone finding churn for commit: filter for clones where both files are affected
                 clone_finding_churn: CloneFindingChurn = get_clone_finding_churn(client, commit.timestamp)
                 filter_clone_finding_churn_by_file([expected_file, expected_sibling], clone_finding_churn)
                 if not clone_finding_churn.is_empty():
-                    logger.yellow(str(clone_finding_churn), level=LogLevel.VERBOSE)
+                    printer.yellow(str(clone_finding_churn), level=LogLevel.INFO)
                 for s in clone_finding_churn.get_finding_links(client):
-                    logger.blue(s, level=LogLevel.VERBOSE)
+                    printer.blue(s, level=LogLevel.INFO)
 
                 affectedness_product: int = file_affectedness * sibling_affectedness
                 if affectedness_product == 9:
                     analysis_result.both_instances_affected_critical_count += 1
-                    logger.red("-> Both affected critical", LogLevel.VERBOSE)
+                    printer.red("-> Both affected critical", LogLevel.INFO)
                 elif affectedness_product == 3 or affectedness_product == 6:
                     analysis_result.one_instance_affected_critical_count += 1
-                    logger.red("-> One affected critical", LogLevel.VERBOSE)
+                    printer.red("-> One affected critical", LogLevel.INFO)
                 elif affectedness_product == 4:
                     analysis_result.both_files_affected_count += 1
-                    logger.white("-> Both affected", LogLevel.VERBOSE)
+                    printer.white("-> Both affected", LogLevel.VERBOSE)
                 elif affectedness_product == 2:
                     analysis_result.one_file_affected_count += 1
-                    logger.white("-> One affected", LogLevel.VERBOSE)
+                    printer.white("-> One affected", LogLevel.VERBOSE)
                 previous_commit_timestamp = commit.timestamp
                 commit_list.extend(new_commits)
 
                 analysis_start = step + 1
                 analysis_result.analysed_until = step
                 pass
-        logger.white(SEPARATOR + "\n" + str(analysis_result))
+        printer.white(SEPARATOR + "\n" + str(analysis_result), LogLevel.RELEVANT)
         pass
 
 
@@ -165,29 +172,28 @@ def check_file(file: str, client: TeamscaleClient, commit_timestamp: int, previo
                affected_files: [FileChange], instance_metrics: InstanceMetrics) -> Affectedness:
     if is_file_affected_at_file_changes(file, affected_files):
         file_name = file.split('/')[-1]
-        logger.white("{0:51}".format(file_name + " affected at commit:") + str(commit_timestamp), level=LogLevel.VERBOSE)
+        printer.white("{0:51}".format(file_name + " affected at commit:") + str(commit_timestamp), level=LogLevel.VERBOSE)
 
         diff_dict, link = get_diff(client, file, previous_commit_timestamp, file, commit_timestamp)
         diff_dict: dict[DiffType, DiffDescription]
         link: str
         try:
             instance_metrics.corrected_start_line, instance_metrics.corrected_end_line = correct_lines(
-                instance_metrics.corrected_start_line,
-                instance_metrics.corrected_end_line, diff_dict.get(
-                    DiffType.LINE_BASED))
+                instance_metrics.corrected_start_line, instance_metrics.corrected_end_line, diff_dict.get(DiffType.LINE_BASED))
         except Exception as e:
+            traceback.print_exc()
             raise type(e)(link)
 
         if are_left_lines_affected_at_diff(instance_metrics.corrected_start_line, instance_metrics.corrected_end_line, diff_dict.get(
                 DiffType.TOKEN_BASED)):
             instance_metrics.affected_critical_count += 1
-            logger.red(file_name + " affected critical", LogLevel.VERBOSE)
-            logger.blue(link, LogLevel.VERBOSE)
+            printer.red(file_name + " affected critical", LogLevel.INFO)
+            printer.blue(link, LogLevel.INFO)
             return Affectedness.AFFECTED_CRITICAL
         else:
             instance_metrics.file_affected_count += 1
-            logger.white(file_name + " is not affected critical", LogLevel.DEBUG)
-            logger.blue(link, LogLevel.DEBUG)
+            printer.white(file_name + " is not affected critical", LogLevel.DEBUG)
+            printer.blue(link, LogLevel.DEBUG)
             return Affectedness.AFFECTED_BY_COMMIT
     else:
         return Affectedness.NOT_AFFECTED

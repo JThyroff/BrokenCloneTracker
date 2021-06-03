@@ -5,9 +5,9 @@ from teamscale_client.teamscale_client_config import TeamscaleClientConfig
 from teamscale_client.utils import auto_str
 
 from src.main.api.data import Commit
-from src.main.pretty_print import LogLevel, MyLogger
+from src.main.pretty_print import LogLevel, MyPrinter
 
-logger: MyLogger = MyLogger(LogLevel.INFO)
+printer: MyPrinter = MyPrinter(LogLevel.INFO)
 
 
 def parse_args() -> TeamscaleClient:
@@ -45,12 +45,12 @@ def parse_args() -> TeamscaleClient:
     if args.project_id:
         project_id = args.project_id
 
-    logger.separator(level=LogLevel.CRUCIAL)
-    logger.yellow("Parsed Arguments:", level=LogLevel.CRUCIAL)
-    logger.white("%s\n%s\n%s\n%s" % (
+    printer.separator(level=LogLevel.CRUCIAL)
+    printer.yellow("Parsed Arguments:", level=LogLevel.CRUCIAL)
+    printer.white("%s\n%s\n%s\n%s" % (
         "Teamscale URL :" + str(teamscale_url), "Username :" + str(username), "Access Token :" + str(access_token),
         "Project ID :" + str(project_id)), level=LogLevel.CRUCIAL)
-    logger.separator(level=LogLevel.CRUCIAL)
+    printer.separator(level=LogLevel.CRUCIAL)
 
     return TeamscaleClient(teamscale_url, username, access_token, project_id)
 

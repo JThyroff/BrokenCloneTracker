@@ -39,7 +39,7 @@ def get_current_time():
     return dt_string
 
 
-class MyLogger:
+class MyPrinter:
     LOG_LEVEL = LogLevel.NONE
 
     def __init__(self, level: LogLevel):

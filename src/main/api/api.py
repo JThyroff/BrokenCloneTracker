@@ -6,9 +6,9 @@ from teamscale_client import TeamscaleClient
 from defintions import JAVA_INT_MAX
 from src.main.api.api_utils import get_project_api_service_url, get_global_service_url
 from src.main.api.data import Commit, CommitAlert, FileChange, DiffDescription, DiffType, CloneFindingChurn
-from src.main.pretty_print import MyLogger, LogLevel
+from src.main.pretty_print import MyPrinter, LogLevel
 
-logger: MyLogger = MyLogger(LogLevel.VERBOSE)
+printer: MyPrinter = MyPrinter(LogLevel.VERBOSE)
 
 
 def get_repository_commits(client: TeamscaleClient, start_commit_timestamp: int, end_commit_timestamp,
@@ -57,13 +57,13 @@ def get_commit_alerts(client: TeamscaleClient, commit_timestamps: [int]) -> dict
     url = get_project_api_service_url(client, "commit-alerts")
     parameters = {"commit": commit_timestamps}
 
-    logger.separator(level=LogLevel.DEBUG)
-    logger.yellow("Getting commit alerts for timestamp " + str(commit_timestamps) + " at URL: " + str(url),
-                  level=LogLevel.DEBUG)
+    printer.separator(level=LogLevel.DEBUG)
+    printer.yellow("Getting commit alerts for timestamp " + str(commit_timestamps) + " at URL: " + str(url),
+                   level=LogLevel.DEBUG)
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
-    logger.white(json.dumps(parsed, indent=4, sort_keys=False), level=LogLevel.DUMP)
+    printer.white(json.dumps(parsed, indent=4, sort_keys=False), level=LogLevel.DUMP)
 
     commit_alert_list_dict: dict[Commit, [CommitAlert]] = dict()
 
@@ -85,15 +85,15 @@ def get_affected_files(client: TeamscaleClient, commit_timestamp: int) -> [FileC
     url = get_project_api_service_url(client, "commits/affected-files")
     parameters = {"commit": commit_timestamp}
 
-    logger.separator(level=LogLevel.DEBUG)
-    logger.yellow(
+    printer.separator(level=LogLevel.DEBUG)
+    printer.yellow(
         "Getting affected files for timestamp " + str(commit_timestamp) + " at URL: " + str(url),
         level=LogLevel.DEBUG)
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
 
-    logger.white(json.dumps(parsed, indent=4, sort_keys=True), level=LogLevel.DUMP)
+    printer.white(json.dumps(parsed, indent=4, sort_keys=True), level=LogLevel.DUMP)
 
     affected_files: [FileChange] = [FileChange.from_json(j) for j in parsed]
 
@@ -111,16 +111,16 @@ def get_diff(client: TeamscaleClient, left_file: str, left_commit_timestamp: int
                   "normalized": False}
     # I currently do not understand, whether "normalized" should be true or not : line-based? when disabled?
 
-    logger.white("Getting diff for left: " + left_file + " at commit " + str(left_commit_timestamp),
-                 level=LogLevel.DEBUG)
-    logger.white("            and right: " + right_file + " at commit " + str(right_commit_timestamp),
-                 level=LogLevel.DEBUG)
+    printer.white("Getting diff for left: " + left_file + " at commit " + str(left_commit_timestamp),
+                  level=LogLevel.DEBUG)
+    printer.white("            and right: " + right_file + " at commit " + str(right_commit_timestamp),
+                  level=LogLevel.DEBUG)
     link = client.url + "/compare.html#/" + left + "#&#" + right
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
 
-    logger.white(json.dumps(parsed, indent=4, sort_keys=True), level=LogLevel.DUMP)
+    printer.white(json.dumps(parsed, indent=4, sort_keys=True), level=LogLevel.DUMP)
 
     diff_dict = {}
 
@@ -133,20 +133,20 @@ def get_diff(client: TeamscaleClient, left_file: str, left_commit_timestamp: int
 
 def get_repository_summary(client: TeamscaleClient) -> tuple[int, int]:
     """get repository summary: means start commit and most recent commit timestamp."""
-    logger.white("Getting repository summary:", LogLevel.VERBOSE)
+    printer.white("Getting repository summary:", LogLevel.VERBOSE)
     url = get_project_api_service_url(client, "repository-summary")
     parameters = {"only-first-and-last": True}
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
-    logger.white("First commit: " + str(parsed['firstCommit']) + ", Most recent commit: " + str(parsed['mostRecentCommit']),
-                 level=LogLevel.VERBOSE)
+    printer.white("First commit: " + str(parsed['firstCommit']) + ", Most recent commit: " + str(parsed['mostRecentCommit']),
+                  level=LogLevel.VERBOSE)
     return parsed['firstCommit'], parsed['mostRecentCommit']
 
 
 def get_clone_finding_churn(client: TeamscaleClient, commit_timestamp: int) -> CloneFindingChurn:
     """get clone finding churn for given commit timestamp"""
-    logger.white("Getting clone finding churn for commit: " + str(commit_timestamp), LogLevel.DEBUG)
+    printer.white("Getting clone finding churn for commit: " + str(commit_timestamp), LogLevel.DEBUG)
     url = get_project_api_service_url(client, "finding-churn/list")
     parameters = {
         "t": commit_timestamp
@@ -154,7 +154,7 @@ def get_clone_finding_churn(client: TeamscaleClient, commit_timestamp: int) -> C
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
-    logger.white(json.dumps(parsed, indent=4, sort_keys=True), level=LogLevel.DUMP)
+    printer.white(json.dumps(parsed, indent=4, sort_keys=True), level=LogLevel.DUMP)
 
     clone_finding_churn: CloneFindingChurn = CloneFindingChurn.from_json(parsed)
 
