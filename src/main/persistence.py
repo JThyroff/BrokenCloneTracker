@@ -1,9 +1,16 @@
 import argparse
+import os
+from json import JSONDecodeError
+from pathlib import Path
+from typing import TextIO
 
+import jsonpickle
 from teamscale_client import TeamscaleClient
 from teamscale_client.teamscale_client_config import TeamscaleClientConfig
 from teamscale_client.utils import auto_str
 
+from defintions import get_alert_file_name, get_project_dir
+from src.main.api.api import get_repository_summary
 from src.main.api.data import Commit
 from src.main.pretty_print import LogLevel, MyPrinter
 
@@ -55,6 +62,47 @@ def parse_args() -> TeamscaleClient:
     return TeamscaleClient(teamscale_url, username, access_token, project_id)
 
 
+def create_project_dir(project: str):
+    """Creates the directory where the project specific files are saved. For example the """
+    Path(get_project_dir(project)).mkdir(parents=True, exist_ok=True)
+
+
+def read_alert_file(client: TeamscaleClient, overwrite=False):
+    file_name: str = get_alert_file_name(client.project)
+    # create structure if non-existent
+    create_project_dir(project=client.project)
+    summary: tuple[int, int] = get_repository_summary(client)
+
+    if overwrite:
+        os.remove(file_name)
+
+    alert_file: AlertFile
+    try:
+        open(file_name, 'x')  # throws FileExistsError if File existent
+        # the file was not existent before. Reading is useless
+        # create a new object to work on
+        alert_file = AlertFile.from_summary(client.project, summary)
+
+    except FileExistsError:
+        # the file already exists
+        # read the current data from the file, process and update it
+        with open(file_name, 'r') as file:
+            file: TextIO
+            try:
+                alert_file = jsonpickle.decode(file.read())
+                # update most recent commit date
+                alert_file.most_recent_commit = summary[1]
+            except JSONDecodeError:
+                # if error occurs while decoding -> fetch all data from repo
+                alert_file = AlertFile.from_summary(client.project, summary)
+    return file_name, alert_file
+
+
+def write_to_file(file_name: str, content):
+    with open(file_name, "w") as file:
+        file.write(jsonpickle.encode(content))
+
+
 @auto_str
 class AlertFile:
     """Alert File serialization structure"""
@@ -67,16 +115,6 @@ class AlertFile:
         self.analysed_until = analysed_until
         self.alert_commit_list = alert_commit_list
 
-    @staticmethod
-    def from_summary(project: str, repository_summary: tuple[int, int]):
-        return AlertFile(project, repository_summary[0], repository_summary[1], repository_summary[0] - 1, [])
-
-    @classmethod
-    def from_json(cls, json):
-        return AlertFile(json['project'], json['first_commit'], json['most_recent_commit'],
-                         json["analysed_until"],
-                         json["alert_list"])
-
     def __eq__(self, other):
         if not isinstance(other, AlertFile):
             return NotImplemented
@@ -86,3 +124,13 @@ class AlertFile:
             return self.project == other.project and self.first_commit == other.first_commit \
                    and self.most_recent_commit == other.most_recent_commit \
                    and self.analysed_until == other.analysed_until and self.alert_commit_list == other.alert_commit_list
+
+    @staticmethod
+    def from_summary(project: str, repository_summary: tuple[int, int]):
+        return AlertFile(project, repository_summary[0], repository_summary[1], repository_summary[0] - 1, [])
+
+    @classmethod
+    def from_json(cls, json):
+        return AlertFile(json['project'], json['first_commit'], json['most_recent_commit'],
+                         json["analysed_until"],
+                         json["alert_list"])

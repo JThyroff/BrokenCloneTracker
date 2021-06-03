@@ -1,61 +1,26 @@
-import os
 import traceback
-from json import JSONDecodeError
-from pathlib import Path
-from typing import TextIO
 
-import jsonpickle
 from teamscale_client import TeamscaleClient
 
-from defintions import get_alert_file_name, get_project_dir
 from src.main.analysis.analysis_utils import (is_file_affected_at_file_changes, are_left_lines_affected_at_diff,
                                               correct_lines, filter_clone_finding_churn_by_file, Affectedness, AnalysisResult,
                                               TextSectionDeletedError, InstanceMetrics)
 from src.main.api.api import get_repository_summary, get_repository_commits, get_commit_alerts, get_affected_files, \
     get_diff, get_clone_finding_churn
 from src.main.api.data import CommitAlert, Commit, FileChange, DiffType, DiffDescription, CloneFindingChurn
-from src.main.persistence import AlertFile
+from src.main.persistence import AlertFile, read_alert_file, write_to_file
 from src.main.pretty_print import MyPrinter, LogLevel, SEPARATOR
 
 printer: MyPrinter = MyPrinter(LogLevel.INFO)
-
-
-def create_project_dir(project: str):
-    """Creates the directory where the project specific files are saved. For example the """
-    Path(get_project_dir(project)).mkdir(parents=True, exist_ok=True)
 
 
 def update_filtered_alert_commits(client: TeamscaleClient, overwrite=False) -> AlertFile:
     """This function updates the alert commit of the project in the corresponding file.
     It reads the current alert file and compares appends new relevant commits from the server."""
     printer.yellow("Updating filtered alert commits... Overwrite = " + str(overwrite), level=LogLevel.INFO)
-    file_name: str = get_alert_file_name(client.project)
-    # create structure if non-existent
-    create_project_dir(project=client.project)
-    summary: tuple[int, int] = get_repository_summary(client)
 
-    if overwrite:
-        os.remove(file_name)
-
+    file_name, alert_file = read_alert_file(client, overwrite)
     alert_file: AlertFile
-    try:
-        open(file_name, 'x')  # throws FileExistsError if File existent
-        # the file was not existent before. Reading is useless
-        # create a new object to work on
-        alert_file = AlertFile.from_summary(client.project, summary)
-
-    except FileExistsError:
-        # the file already exists
-        # read the current data from the file, process and update it
-        with open(file_name, 'r') as file:
-            file: TextIO
-            try:
-                alert_file = jsonpickle.decode(file.read())
-                # update most recent commit date
-                alert_file.most_recent_commit = summary[1]
-            except JSONDecodeError:
-                # if error occurs while decoding -> fetch all data from repo
-                alert_file = AlertFile.from_summary(client.project, summary)
 
     # start analysis
     analysis_start: int = alert_file.analysed_until
@@ -66,14 +31,13 @@ def update_filtered_alert_commits(client: TeamscaleClient, overwrite=False) -> A
             step = alert_file.most_recent_commit
         alert_file.alert_commit_list.extend(get_repository_commits(client, analysis_start, step, filter_alerts=True))
         alert_file.analysed_until = step
-        with open(file_name, "w") as file:
-            file.write(jsonpickle.encode(alert_file))
+        write_to_file(file_name, alert_file)
         analysis_start = step + 1
 
     return alert_file
 
 
-def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: int):
+def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: int) -> [AnalysisResult]:
     """Analyzes one given alert commit. This function scans all commits after the given timestamp for relevant changes
     in the code base."""
     printer.yellow("Analysing one alert commit...", level=LogLevel.INFO)
@@ -88,6 +52,8 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
 
     # fetch repository repository_summary
     repository_summary: tuple[int, int] = get_repository_summary(client)
+
+    results: [AnalysisResult] = []
 
     for commit_alert in alert_list:  # sometimes more than one alert is attached to a commit
         commit_alert: CommitAlert
@@ -119,7 +85,8 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                 # goal: retrieve affectedness of the relevant text passages for each commit
                 affected_files: [FileChange] = get_affected_files(client, commit.timestamp)
                 project_meta = (client, commit.timestamp, previous_commit_timestamp, affected_files)
-                # check file
+
+                # region check file
                 file_affectedness: Affectedness = Affectedness.NOT_AFFECTED
                 if not analysis_result.instance_metrics.deleted:
                     try:
@@ -128,7 +95,9 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                         analysis_result.instance_metrics.deleted = True
                         printer.red("Instance deleted.", LogLevel.INFO)
                         printer.blue(str(e), LogLevel.INFO)
-                # check sibling
+                # endregion
+
+                # region check sibling
                 sibling_affectedness: Affectedness = Affectedness.NOT_AFFECTED
                 if not analysis_result.sibling_instance_metrics.deleted:
                     try:
@@ -137,14 +106,21 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                         analysis_result.sibling_instance_metrics.deleted = True
                         printer.red("Sibling deleted.", LogLevel.INFO)
                         printer.blue(str(e), LogLevel.INFO)
-                # get clone finding churn for commit: filter for clones where both files are affected
-                clone_finding_churn: CloneFindingChurn = get_clone_finding_churn(client, commit.timestamp)
-                filter_clone_finding_churn_by_file([expected_file, expected_sibling], clone_finding_churn)
-                if not clone_finding_churn.is_empty():
-                    printer.yellow(str(clone_finding_churn), level=LogLevel.INFO)
-                for s in clone_finding_churn.get_finding_links(client):
-                    printer.blue(s, level=LogLevel.INFO)
+                # endregion        
 
+                # region get clone finding churn for commit: filter for clones where both files are affected
+                clone_finding_churn: CloneFindingChurn = get_clone_finding_churn(client, commit.timestamp)
+                clone_finding_churn = filter_clone_finding_churn_by_file([expected_file, expected_sibling], clone_finding_churn)
+                if not clone_finding_churn.is_empty():
+
+                    printer.yellow(str(clone_finding_churn), level=LogLevel.INFO)
+                    for s in clone_finding_churn.get_finding_links(client):
+                        printer.blue(s, level=LogLevel.INFO)
+                    if clone_finding_churn.is_relevant():
+                        analysis_result.clone_findings_count += 1
+                # endregion
+
+                # region interpret affectedness
                 affectedness_product: int = file_affectedness * sibling_affectedness
                 if affectedness_product == 9:
                     analysis_result.both_instances_affected_critical_count += 1
@@ -158,6 +134,8 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                 elif affectedness_product == 2:
                     analysis_result.one_file_affected_count += 1
                     printer.white("-> One affected", LogLevel.VERBOSE)
+                # endregion
+
                 previous_commit_timestamp = commit.timestamp
                 commit_list.extend(new_commits)
 
@@ -165,7 +143,8 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                 analysis_result.analysed_until = step
                 pass
         printer.white(SEPARATOR + "\n" + str(analysis_result), LogLevel.RELEVANT)
-        pass
+        results.append(analysis_result)
+    return results
 
 
 def check_file(file: str, client: TeamscaleClient, commit_timestamp: int, previous_commit_timestamp: int,

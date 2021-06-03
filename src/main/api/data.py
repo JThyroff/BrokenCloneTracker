@@ -342,6 +342,9 @@ class CloneFindingChurn:
             links.append(clone_finding.get_finding_link(client))
         return links
 
+    def is_relevant(self):
+        return self.added_findings or self.findings_added_in_branch or self.findings_in_changed_code
+
     def is_empty(self):
         return not (self.added_findings or self.findings_added_in_branch or self.findings_in_changed_code
                     or self.removed_findings or self.findings_removed_in_branch)

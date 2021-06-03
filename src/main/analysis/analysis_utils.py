@@ -101,8 +101,7 @@ def are_left_lines_affected_at_diff(raw_start_line: int, raw_end_line: int, diff
     return False
 
 
-def filter_clone_finding_churn_by_file(file_uniform_paths: [str],
-                                       clone_finding_churn: CloneFindingChurn) -> CloneFindingChurn:
+def filter_clone_finding_churn_by_file(file_uniform_paths: [str], clone_finding_churn: CloneFindingChurn) -> CloneFindingChurn:
     """filter a clone finding churn by files. All findings will be reduced to the one where all files in the given
     list are affected"""
 
@@ -114,13 +113,10 @@ def filter_clone_finding_churn_by_file(file_uniform_paths: [str],
         return True
 
     clone_finding_churn.added_findings = list(filter(lambda x: file_filter(x), clone_finding_churn.added_findings))
-    clone_finding_churn.findings_added_in_branch = list(
-        filter(lambda x: file_filter(x), clone_finding_churn.findings_added_in_branch))
-    clone_finding_churn.findings_in_changed_code = list(
-        filter(lambda x: file_filter(x), clone_finding_churn.findings_in_changed_code))
+    clone_finding_churn.findings_added_in_branch = list(filter(lambda x: file_filter(x), clone_finding_churn.findings_added_in_branch))
+    clone_finding_churn.findings_in_changed_code = list(filter(lambda x: file_filter(x), clone_finding_churn.findings_in_changed_code))
     clone_finding_churn.removed_findings = list(filter(lambda x: file_filter(x), clone_finding_churn.removed_findings))
-    clone_finding_churn.findings_removed_in_branch = list(filter(lambda x: file_filter(x),
-                                                                 clone_finding_churn.findings_removed_in_branch))
+    clone_finding_churn.findings_removed_in_branch = list(filter(lambda x: file_filter(x), clone_finding_churn.findings_removed_in_branch))
     return clone_finding_churn
 
 
