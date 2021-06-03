@@ -58,19 +58,21 @@ class AnalysisResult:
 
     def __str__(self):
         return ("Analysis Result for " + self.project + ": first commit: " + str(self.first_commit) + ", most recent commit: "
-                + str(self.most_recent_commit) + ", analysed until: " + str(self.analysed_until) + "\n" + SEPARATOR + "\n"
-                + str(self.commit_alert) + "\n" + SEPARATOR + "\nCorrected instance interval: "
-                + self.instance_metrics.get_corrected_interval()
-                + "\nCorrected sibling interval: " + self.sibling_instance_metrics.get_corrected_interval()
+                + str(self.most_recent_commit) + ", analysed until: " + str(self.analysed_until)
+                + "\n" + SEPARATOR
+                + "\n" + str(self.commit_alert)
+                + "\n" + SEPARATOR
                 + "\nFile affected count: " + str(self.instance_metrics.file_affected_count)
-                + "\nInstance affected critical count: "
-                + str(self.instance_metrics.affected_critical_count) + "\nSibling file affected count: "
-                + str(self.sibling_instance_metrics.file_affected_count) + "\nSibling instance affected critical count: "
-                + str(self.sibling_instance_metrics.affected_critical_count)
-                + "\nOne file affected count: " + str(self.one_file_affected_count) + "\nBoth files affected count: "
-                + str(self.both_files_affected_count) + "\nOne file affected critical count: "
-                + str(self.one_instance_affected_critical_count) + "\nBoth files affected critical count: "
-                + str(self.both_instances_affected_critical_count) + "\nRelevant clone findings count: " + str(self.clone_findings_count))
+                + "\nInstance affected critical count: " + str(self.instance_metrics.affected_critical_count)
+                + "\nCorrected instance interval: " + self.instance_metrics.get_corrected_interval()
+                + "\nSibling file affected count: " + str(self.sibling_instance_metrics.file_affected_count)
+                + "\nSibling instance affected critical count: " + str(self.sibling_instance_metrics.affected_critical_count)
+                + "\nCorrected sibling interval: " + self.sibling_instance_metrics.get_corrected_interval()
+                + "\nOne file affected count: " + str(self.one_file_affected_count)
+                + "\nBoth files affected count: " + str(self.both_files_affected_count)
+                + "\nOne file affected critical count: " + str(self.one_instance_affected_critical_count)
+                + "\nBoth files affected critical count: " + str(self.both_instances_affected_critical_count)
+                + "\nRelevant clone findings count: " + str(self.clone_findings_count))
 
     @staticmethod
     def from_alert(project: str, first_commit: int, most_recent_commit: int, analysed_until: int,

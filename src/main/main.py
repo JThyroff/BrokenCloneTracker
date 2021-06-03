@@ -1,3 +1,5 @@
+import traceback
+
 from teamscale_client import TeamscaleClient
 
 from src.main.analysis.analysis import update_filtered_alert_commits, analyse_one_alert_commit
@@ -22,19 +24,39 @@ def show_projects(client: TeamscaleClient) -> None:
     printer.separator()
 
 
-def main(client: TeamscaleClient) -> None:
+def run_analysis(client: TeamscaleClient):
     client.check_api_version()
     alert_file: AlertFile = update_filtered_alert_commits(client, overwrite=False)
     printer.separator(LogLevel.INFO)
+    printer.blue("Alert commit count: " + str(len(alert_file.alert_commit_list)), LogLevel.INFO)
+    successful_analysis_count = 0
+    successful_runs = []
+    failed_runs = []
     for alert_commit in alert_file.alert_commit_list:
         printer.separator(LogLevel.INFO)
         alert_commit: Commit
         try:
             analyse_one_alert_commit(client, alert_commit.timestamp)
+            successful_analysis_count += 1
+            successful_runs.append(alert_commit.timestamp)
         except Exception as e:
+            traceback.print_exc()
             printer.red("ERROR")
+            failed_runs.append(alert_commit.timestamp)
+    printer.blue("Alert commit count: " + str(len(alert_file.alert_commit_list)), LogLevel.INFO)
+    printer.blue("Successful analysis count: " + str(successful_analysis_count))
+    printer.blue("Successful runs: ")
+    printer.white(", ".join(str(commit_timestamp) for commit_timestamp in successful_runs))
+    printer.blue("Failed runs: ")
+    printer.red(", ".join(str(commit_timestamp) for commit_timestamp in failed_runs))
     return
 
+
+def main(client: TeamscaleClient) -> None:
+    client.check_api_version()
+    run_analysis(client)
+    return
+    analyse_one_alert_commit(client, 1521580769000)
     get_clone_finding_churn(client, 1521580769000)
     get_repository_summary(client)
 
