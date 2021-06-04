@@ -163,8 +163,7 @@ def correct_lines(loc_start_line: int, loc_end_line: int, diff_desc: DiffDescrip
 
     deletion_pre_check(loc_interval, diff_desc)
 
-    for left_interval, right_interval in zip(diff_desc.left_change_line_intervals,
-                                             diff_desc.right_change_line_intervals):
+    for left_interval, right_interval in zip(diff_desc.left_change_line_intervals, diff_desc.right_change_line_intervals):
         left_length = get_interval_length(left_interval)
         right_length = get_interval_length(right_interval)
         # [4,6) -> [4,5)

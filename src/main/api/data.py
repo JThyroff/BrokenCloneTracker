@@ -22,8 +22,12 @@ class Commit(object):
         elif self is other:
             return True
         else:
-            return self.branch == other.branch and self.timestamp == other.timestamp \
-                   and self.parent_commits == other.parent_commits and self.commit_type == other.commit_type
+            return (
+                    self.branch == other.branch
+                    and self.timestamp == other.timestamp
+                    and self.parent_commits == other.parent_commits
+                    and self.commit_type == other.commit_type
+            )
 
     def __hash__(self):
         return hash((self.branch, self.timestamp))
@@ -56,20 +60,26 @@ class TextRegionLocation(object):
         elif self is other:
             return True
         else:
-            return self.location == other.location and self.raw_end_line == other.raw_end_line \
-                   and self.raw_end_offset == other.raw_end_offset and self.raw_start_line == other.raw_start_line \
-                   and self.raw_start_offset == other.raw_start_offset and self.location_type == other.location_type \
-                   and self.uniform_path == other.uniform_path
+            return (
+                    self.location == other.location
+                    and self.raw_end_line == other.raw_end_line
+                    and self.raw_end_offset == other.raw_end_offset
+                    and self.raw_start_line == other.raw_start_line
+                    and self.raw_start_offset == other.raw_start_offset
+                    and self.location_type == other.location_type
+                    and self.uniform_path == other.uniform_path
+            )
 
     def get_interval(self):
         return "[" + str(self.raw_start_line) + "-" + str(self.raw_end_line) + ")"
 
     @classmethod
     def from_json(cls, json):
-        return TextRegionLocation(json['location'], json['rawEndLine'],
-                                  json['rawEndOffset'], json['rawStartLine'], json['rawStartOffset'],
-                                  json['type'],
-                                  json['uniformPath'])
+        return TextRegionLocation(
+            json['location']
+            , json['rawEndLine'], json['rawEndOffset'], json['rawStartLine'], json['rawStartOffset']
+            , json['type'], json['uniformPath']
+        )
 
 
 @auto_str

@@ -37,8 +37,12 @@ def plot_results(project: str, successful_runs, failed_runs):
     successful_result_count = reduce(lambda a, b: a + b, (len(entry[1]) for entry in successful_runs))
     run_count = len(failed_runs) + successful_result_count
     printer.separator(LogLevel.RELEVANT)
-    printer.blue("Successful run count:\t\t" + str(len(successful_runs)) + "\nSuccessful result count:\t" + str(successful_result_count)
-                 + "\nFailed result count:\t\t" + str(len(failed_runs)), LogLevel.RELEVANT)
+    printer.blue(
+        "Successful run count:\t\t" + str(len(successful_runs))
+        + "\nSuccessful result count:\t" + str(successful_result_count)
+        + "\nFailed result count:\t\t" + str(len(failed_runs))
+        , LogLevel.RELEVANT
+    )
 
     clone_finding_count = 0
     one_instance_affected_critical_count = 0
@@ -70,9 +74,11 @@ def plot_results(project: str, successful_runs, failed_runs):
                 not_modified_count += 1
 
     labels = 'Not Modified at All', 'Only One Affected Critical', 'New Clone', 'Error', 'Both Affected Critical', 'Instance deletion'
-    sizes = [not_modified_count / run_count, one_instance_affected_critical_count / run_count,
-             clone_finding_count / one_instance_affected_critical_count, len(failed_runs) /
-             run_count, both_instances_affected_critical_count / run_count, instance_deletion_count / run_count]
+    sizes = [
+        not_modified_count / run_count, one_instance_affected_critical_count / run_count,
+        clone_finding_count / one_instance_affected_critical_count, len(failed_runs) / run_count,
+        both_instances_affected_critical_count / run_count, instance_deletion_count / run_count
+    ]
     explode = (0.0, 0.1, 0.0, 0.0, 0.0, 0.0)
 
     fig1, ax1 = plt.subplots(figsize=(12, 8))
@@ -140,10 +146,11 @@ def main(client: TeamscaleClient) -> None:
     a = get_affected_files(client, commit.timestamp)
     b = is_file_affected_at_file_changes("src/main/java/org/jabref/JabRefGUI.java", a)
     print(b)
-    d: DiffDescription = get_diff(client, DiffType.TOKEN_BASED,
-                                  "src/main/java/org/jabref/logic/importer/WebFetchers.java",
-                                  1606807412000,
-                                  "src/main/java/org/jabref/logic/importer/WebFetchers.java", 1608743869000)
+    d: DiffDescription = get_diff(
+        client, DiffType.TOKEN_BASED
+        , "src/main/java/org/jabref/logic/importer/WebFetchers.java", 1606807412000
+        , "src/main/java/org/jabref/logic/importer/WebFetchers.java", 1608743869000
+    )
     print(str(d))
     print(str(are_left_lines_affected_at_diff(93, 105, d)))
 

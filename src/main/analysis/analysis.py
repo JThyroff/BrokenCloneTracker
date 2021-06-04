@@ -2,11 +2,13 @@ import traceback
 
 from teamscale_client import TeamscaleClient
 
-from src.main.analysis.analysis_utils import (is_file_affected_at_file_changes, are_left_lines_affected_at_diff,
-                                              correct_lines, filter_clone_finding_churn_by_file, Affectedness, AnalysisResult,
-                                              TextSectionDeletedError, InstanceMetrics)
-from src.main.api.api import get_repository_summary, get_repository_commits, get_commit_alerts, get_affected_files, \
-    get_diff, get_clone_finding_churn
+from src.main.analysis.analysis_utils import (
+    is_file_affected_at_file_changes, are_left_lines_affected_at_diff, correct_lines, filter_clone_finding_churn_by_file, Affectedness,
+    AnalysisResult, TextSectionDeletedError, InstanceMetrics
+)
+from src.main.api.api import (
+    get_repository_summary, get_repository_commits, get_commit_alerts, get_affected_files, get_diff, get_clone_finding_churn
+)
 from src.main.api.data import CommitAlert, Commit, FileChange, DiffType, DiffDescription, CloneFindingChurn
 from src.main.persistence import AlertFile, read_alert_file, write_to_file
 from src.main.pretty_print import MyPrinter, LogLevel, SEPARATOR
@@ -58,8 +60,9 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
     for commit_alert in alert_list:  # sometimes more than one alert is attached to a commit
         commit_alert: CommitAlert
 
-        analysis_result: AnalysisResult = AnalysisResult.from_alert(client.project, *repository_summary, repository_summary[0] - 1,
-                                                                    commit_alert=commit_alert)
+        analysis_result: AnalysisResult = AnalysisResult.from_alert(
+            client.project, *repository_summary, repository_summary[0] - 1, commit_alert=commit_alert
+        )
         # region logging
         printer.separator(level=LogLevel.VERBOSE)
         printer.yellow("Analysing " + str(commit_alert), level=LogLevel.VERBOSE)
