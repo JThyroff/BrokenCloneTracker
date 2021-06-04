@@ -121,6 +121,19 @@ class CommitAlert(object):
                 self.context.expected_sibling_location.uniform_path + "\nSibling interval: "
                 + self.context.expected_sibling_location.get_interval())
 
+    def get_link(self, client: TeamscaleClient, commit_timestamp: int) -> str:
+
+        return (client.url + "/compare.html#/"
+                + client.project + "/" + self.context.expected_sibling_location.uniform_path + "#@#"
+                + client.branch + ":" + str(commit_timestamp) + "#&#"
+                + client.project + "/" + self.context.expected_clone_location.uniform_path + "#@#"
+                + client.branch + ":" + str(commit_timestamp) + "#&#"
+                + str(self.context.expected_sibling_location.raw_start_line) + "-"
+                + str(self.context.expected_sibling_location.raw_end_line) + ":"
+                + str(self.context.expected_clone_location.raw_start_line) + "-"
+                + str(self.context.expected_clone_location.raw_end_line)
+                + "#&#isInconsistentClone")
+
     @classmethod
     def from_json(cls, json):
         return CommitAlert(CommitAlertContext.from_json(json['context']), json['message'])

@@ -117,14 +117,19 @@ def run_analysis(client: TeamscaleClient):
 
 def main(client: TeamscaleClient) -> None:
     client.check_api_version()
-    result_dict: dict = read_from_file(get_result_file_name(client.project))
-    successful_runs = result_dict.get("successful runs")
-    failed_runs = result_dict.get("failed runs")
-    plot_results(client.project, successful_runs, failed_runs)
-    return
+    client.branch = "main"
 
+    def read_and_plot():
+        result_dict: dict = read_from_file(get_result_file_name(client.project))
+        successful_runs = result_dict.get("successful runs")
+        failed_runs = result_dict.get("failed runs")
+        plot_results(client.project, successful_runs, failed_runs)
+
+    analyse_one_alert_commit(client, 1493636171000)
+    return
+    read_and_plot()
     run_analysis(client)
-    analyse_one_alert_commit(client, 1521580769000)
+
     get_clone_finding_churn(client, 1521580769000)
     get_repository_summary(client)
 

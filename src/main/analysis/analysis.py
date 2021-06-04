@@ -11,7 +11,7 @@ from src.main.api.data import CommitAlert, Commit, FileChange, DiffType, DiffDes
 from src.main.persistence import AlertFile, read_alert_file, write_to_file
 from src.main.pretty_print import MyPrinter, LogLevel, SEPARATOR
 
-printer: MyPrinter = MyPrinter(LogLevel.INFO)
+printer: MyPrinter = MyPrinter(LogLevel.DEBUG)
 
 
 def update_filtered_alert_commits(client: TeamscaleClient, overwrite=False) -> AlertFile:
@@ -62,7 +62,8 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                                                                     commit_alert=commit_alert)
         # region logging
         printer.separator(level=LogLevel.VERBOSE)
-        printer.yellow("Analysing " + str(commit_alert))
+        printer.yellow("Analysing " + str(commit_alert), level=LogLevel.VERBOSE)
+        printer.yellow(commit_alert.get_link(client, alert_commit_timestamp), level=LogLevel.VERBOSE)
         printer.separator(LogLevel.VERBOSE)
         # endregion
         # start analysis
@@ -149,6 +150,8 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
 
 def check_file(file: str, client: TeamscaleClient, commit_timestamp: int, previous_commit_timestamp: int,
                affected_files: [FileChange], instance_metrics: InstanceMetrics) -> Affectedness:
+    """Check for given file whether it is affected at a specific commit timestamp. If it is modified the diff will be analysed and looked up
+    whether the relevant text passage is modified in this commit."""
     if is_file_affected_at_file_changes(file, affected_files):
         file_name = file.split('/')[-1]
         printer.white("{0:51}".format(file_name + " affected at commit:") + str(commit_timestamp), level=LogLevel.VERBOSE)
