@@ -7,6 +7,7 @@ from portion import Interval
 from src.main.api.data import FileChange, DiffDescription, CloneFindingChurn, CloneFinding, CommitAlert, \
     CommitAlertContext
 from src.main.pretty_print import SEPARATOR
+from src.main.utils.interval_utils import get_interval_length, overlaps_more_than_threshold
 
 
 class TextSectionDeletedError(Exception):
@@ -64,9 +65,11 @@ class AnalysisResult:
                 + "\n" + SEPARATOR
                 + "\nFile affected count: " + str(self.instance_metrics.file_affected_count)
                 + "\nInstance affected critical count: " + str(self.instance_metrics.affected_critical_count)
+                + "\nFile deleted: " + str(self.instance_metrics.deleted)
                 + "\nCorrected instance interval: " + self.instance_metrics.get_corrected_interval()
                 + "\nSibling file affected count: " + str(self.sibling_instance_metrics.file_affected_count)
                 + "\nSibling instance affected critical count: " + str(self.sibling_instance_metrics.affected_critical_count)
+                + "\nSibling file deleted: " + str(self.sibling_instance_metrics.deleted)
                 + "\nCorrected sibling interval: " + self.sibling_instance_metrics.get_corrected_interval()
                 + "\nOne file affected count: " + str(self.one_file_affected_count)
                 + "\nBoth files affected count: " + str(self.both_files_affected_count)
@@ -126,10 +129,25 @@ def is_file_affected_at_clone_finding_churn(file_uniform_path: str, clone_findin
     return not clone_finding_churn.is_empty()
 
 
-def get_interval_length(interval: Interval) -> int:
-    if interval.empty:
-        return 0
-    return interval.upper - interval.lower
+def deletion_pre_check(relevant_interval: Interval, diff_desc: DiffDescription):
+    # filter the intervals within the relevant interval
+    intervals_inside: [(Interval, Interval)] = list(
+        filter(
+            lambda interval_tuple: (overlaps_more_than_threshold(interval_tuple[0], relevant_interval, 0.9)),
+            zip(diff_desc.left_change_line_intervals, diff_desc.right_change_line_intervals)
+        )
+    )
+
+    x = 0
+    for left_interval, right_interval in intervals_inside:
+        left_length = get_interval_length(left_interval)
+        right_length = get_interval_length(right_interval)
+        x += (right_length - left_length)
+
+    relevant_interval_length = get_interval_length(relevant_interval)
+    if relevant_interval_length + x < 0.2 * relevant_interval_length:
+        # more than 80% of the relevant clone section is deleted for sure
+        raise TextSectionDeletedError("more than 80% of the relevant clone section is deleted for sure.")
 
 
 def correct_lines(loc_start_line: int, loc_end_line: int, diff_desc: DiffDescription):
@@ -143,6 +161,8 @@ def correct_lines(loc_start_line: int, loc_end_line: int, diff_desc: DiffDescrip
     # the Interval which start and end location should be corrected
     loc_interval: Interval = portion.closedopen(loc_start_line, loc_end_line)
 
+    deletion_pre_check(loc_interval, diff_desc)
+
     for left_interval, right_interval in zip(diff_desc.left_change_line_intervals,
                                              diff_desc.right_change_line_intervals):
         left_length = get_interval_length(left_interval)
@@ -150,22 +170,26 @@ def correct_lines(loc_start_line: int, loc_end_line: int, diff_desc: DiffDescrip
         # [4,6) -> [4,5)
         x = right_length - left_length
         if left_interval < loc_interval:
-            # need to adjust the lines
+            # the modification is entirely above the relevant text passage -> need to adjust start and end line
             loc_start_line = loc_start_line + x
             loc_end_line = loc_end_line + x
         elif left_interval in loc_interval:
-            # apply change only to end line as start line stays unaffected
+            # the modification is within the relevant text passage -> apply change only to end line as start line stays unaffected
             loc_end_line = loc_end_line + x
         elif left_interval > loc_interval:
+            # the modification is entirely on the right of the relevant passage
             # return cause intervals are sorted -> No important intervals will follow
             return loc_start_line, loc_end_line
         # below are edge cases which may introduce errors
-        elif loc_interval in left_interval:  # location is entirely in the modified interval. Check for deletion
-            if right_length == 0:  # the relevant section was deleted
+        elif loc_interval in left_interval:  # location is entirely affected by the modified interval. Check for deletion
+            # check for empty interval or even for whole file deletion (which results in portion.closedopen(1,2))
+            if right_length == 0 or (right_interval == portion.closedopen(1, 2)):  # the relevant section was deleted
                 raise TextSectionDeletedError("The relevant text section was deleted with this diff.")
             else:
                 raise NotImplementedError("I currently do not know how to handle this special case")
         elif left_interval <= loc_interval:
+            # the modification is left of the upper bound of the relevant passage. So the end line is affected for sure.
+            # what about the start line?
             loc_end_line = loc_end_line + x
         elif left_interval >= loc_interval:
             # loc_start_line = loc_start_line + x

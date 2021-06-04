@@ -1,9 +1,9 @@
 from enum import Enum
 
-import portion
-from portion import Interval
 from teamscale_client import TeamscaleClient
 from teamscale_client.utils import auto_str
+
+from src.main.utils.interval_utils import list_to_interval_list
 
 
 @auto_str
@@ -168,18 +168,6 @@ class DiffType(Enum):
     @classmethod
     def from_json(cls, json):
         return DiffType[json.upper().replace("-", "_").replace("(", "").replace(")", "").replace(" ", "_")]
-
-
-def list_to_interval_list(int_list: [int]) -> [Interval]:
-    """Takes an int list and converts every two ints to an interval"""
-    assert len(int_list) % 2 == 0
-    to_return: [Interval] = []
-    idx: int = 0
-    while idx < len(int_list):
-        to_return.append(
-            portion.closedopen(int_list[idx], int_list[idx + 1]))
-        idx = idx + 2
-    return to_return
 
 
 @auto_str

@@ -161,13 +161,15 @@ def check_file(file: str, client: TeamscaleClient, commit_timestamp: int, previo
         link: str
         try:
             instance_metrics.corrected_start_line, instance_metrics.corrected_end_line = correct_lines(
-                instance_metrics.corrected_start_line, instance_metrics.corrected_end_line, diff_dict.get(DiffType.LINE_BASED))
+                instance_metrics.corrected_start_line, instance_metrics.corrected_end_line, diff_dict.get(DiffType.LINE_BASED)
+            )
         except Exception as e:
             traceback.print_exc()
             raise type(e)(link)
 
-        if are_left_lines_affected_at_diff(instance_metrics.corrected_start_line, instance_metrics.corrected_end_line, diff_dict.get(
-                DiffType.TOKEN_BASED)):
+        if are_left_lines_affected_at_diff(
+                instance_metrics.corrected_start_line, instance_metrics.corrected_end_line, diff_dict.get(DiffType.TOKEN_BASED)
+        ):
             instance_metrics.affected_critical_count += 1
             printer.red(file_name + " affected critical", LogLevel.INFO)
             printer.blue(link, LogLevel.INFO)

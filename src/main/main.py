@@ -125,7 +125,7 @@ def main(client: TeamscaleClient) -> None:
         failed_runs = result_dict.get("failed runs")
         plot_results(client.project, successful_runs, failed_runs)
 
-    analyse_one_alert_commit(client, 1493636171000)
+    analyse_one_alert_commit(client, 1504177241000)
     return
     read_and_plot()
     run_analysis(client)
