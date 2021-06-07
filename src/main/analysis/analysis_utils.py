@@ -130,25 +130,50 @@ def is_file_affected_at_clone_finding_churn(file_uniform_path: str, clone_findin
 
 
 def deletion_pre_check(relevant_interval: Interval, diff_desc: DiffDescription):
-    # filter the intervals that overlap more than 90% with the relevant interval
-    overlapping_intervals: [(Interval, Interval)] = list(
+    # if less than deletion_pre_check_factor * relevant_interval_length lines stay after a modification of a relevant text
+    # section, the whole section is considered as deleted
+    deletion_pre_check_factor = 0.2
+    deletion_pre_check_factor_inverse_string = str((1 - deletion_pre_check_factor) * 100)
+    relevant_interval_length = get_interval_length(relevant_interval)
+
+    intersecting_intervals: [(Interval, Interval)] = list(
         filter(
-            lambda interval_tuple: (overlaps_more_than_threshold(interval_tuple[0], relevant_interval, 0.9)),
+            lambda interval_tuple: not interval_tuple[0].intersection(relevant_interval).empty,
             zip(diff_desc.left_change_line_intervals, diff_desc.right_change_line_intervals)
         )
     )
 
-    x = 0
+    # check full deletion of intersecting Intervals
+    deleted_lines = 0
+    for left_interval, right_interval in intersecting_intervals:
+        if right_interval.empty:
+            deleted_lines += get_interval_length(left_interval.intersection(relevant_interval))
+    if relevant_interval_length - deleted_lines < deletion_pre_check_factor * relevant_interval_length:
+        raise TextSectionDeletedError(
+            "more than " + deletion_pre_check_factor_inverse_string + "% of the relevant clone section is deleted for sure."
+        )
+
+    # filter the intervals that overlap more than 80% with the relevant interval
+    overlapping_intervals: [(Interval, Interval)] = list(
+        filter(
+            lambda interval_tuple: (overlaps_more_than_threshold(interval_tuple[0], relevant_interval, 0.8)),
+            intersecting_intervals
+        )
+    )
+
+    # calculate line diff count - for the case that the Interval is not fully deleted but still modified in a relevant way
+    line_diff_count = 0
     for left_interval, right_interval in overlapping_intervals:
         left_length = get_interval_length(left_interval)
         right_length = get_interval_length(right_interval)
-        x += (right_length - left_length)
+        line_diff_count += (right_length - left_length)
 
-    relevant_interval_length = get_interval_length(relevant_interval)
     # if the overlapping intervals are mostly line deletions -> the relevant clone section is also deleted
-    if relevant_interval_length + x < 0.2 * relevant_interval_length:
-        # more than 80% of the relevant clone section is deleted for sure
-        raise TextSectionDeletedError("more than 80% of the relevant clone section is deleted for sure.")
+    if relevant_interval_length + line_diff_count < deletion_pre_check_factor * relevant_interval_length:
+        # more than (1 - deletion_pre_check_factor) * 100% of the relevant clone section is deleted for sure
+        raise TextSectionDeletedError(
+            "more than " + deletion_pre_check_factor_inverse_string + "% of the relevant clone section is deleted for sure."
+        )
 
 
 def correct_lines(loc_start_line: int, loc_end_line: int, diff_desc: DiffDescription):
