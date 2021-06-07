@@ -107,7 +107,7 @@ def plot_results(project: str, successful_runs, failed_runs):
     my_circle = plt.Circle((0, 0), 0.7, color='white')
     ax1.add_artist(my_circle)
     fig1.canvas.set_window_title("Broken Clone Lifecycles for " + project)
-    plt.legend(loc=(0.82, 0.16))
+    plt.legend(loc=(-0.14, -0.12))
     plt.show()
 
 
