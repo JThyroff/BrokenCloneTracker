@@ -353,7 +353,7 @@ class CloneFindingChurn:
             links.append(clone_finding.get_finding_link(client))
         return links
 
-    def is_relevant(self):
+    def is_relevant(self):  # TODO adjust findings in changed code
         return self.added_findings or self.findings_added_in_branch or self.findings_in_changed_code
 
     def is_empty(self):

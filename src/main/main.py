@@ -8,7 +8,8 @@ from teamscale_client import TeamscaleClient
 
 from defintions import get_result_file_name
 from src.main.analysis.analysis import update_filtered_alert_commits, analyse_one_alert_commit
-from src.main.analysis.analysis_utils import are_left_lines_affected_at_diff, is_file_affected_at_file_changes, AnalysisResult
+from src.main.analysis.analysis_utils import are_left_lines_affected_at_diff, is_file_affected_at_file_changes, AnalysisResult, \
+    TextSectionDeletedError
 from src.main.api.data import DiffType, Commit, DiffDescription
 from src.main.persistence import parse_args, AlertFile, write_to_file, read_from_file
 from src.main.pretty_print import MyPrinter, LogLevel
@@ -52,24 +53,25 @@ def plot_results(project: str, successful_runs, failed_runs):
     both_instances_deleted_count = 0
     clone_finding_count = 0
     # Interpretation of the result and categorization of the findings
-    # Importance:   0. Error while analysing            -> Fix code or special handling
+    # Importance:  -1. Error while analysing            -> Fix code or special handling
+    #               0. Deletion of relevant passage     -> A relevant text passage was deleted in further development
     #               1. New clone finding                -> The broken clone seems to appear as normal clone afterwards
     #               2. Only one instance affected critic-> The broken clone was modified at one point in time only at one text passage
-    #                  or deletion of relevant passage      => possibly even more inconsistency introduced
+    #                                                       => possibly even more inconsistency introduced
     #               3. Both instance affected critical  -> The relevant text passages are at least modified once together
     #                                                       => possibly consistent maintenance
     #               4. Not modified at all              -> after the introduction of the broken clone the relevant text passages were not
     #                                                       modified at all
-    for entry in successful_runs:
+    for entry in successful_runs:  # TODO clone finding count?
         analysis_results: [AnalysisResult] = entry[1]
         for result in analysis_results:
             result: AnalysisResult
-            if result.clone_findings_count != 0:
-                clone_finding_count += 1
-            elif result.instance_metrics.deleted and result.sibling_instance_metrics.deleted:
+            if result.instance_metrics.deleted and result.sibling_instance_metrics.deleted:
                 both_instances_deleted_count += 1
             elif result.instance_metrics.deleted or result.sibling_instance_metrics.deleted:
                 instance_deletion_count += 1
+            elif result.clone_findings_count != 0:
+                clone_finding_count += 1
             elif result.one_file_affected_count != 0:
                 one_instance_affected_critical_count += 1
             elif result.both_instances_affected_critical_count != 0:
@@ -78,39 +80,34 @@ def plot_results(project: str, successful_runs, failed_runs):
                 not_modified_count += 1
 
     labels = (
-        'Not Modified at All', 'Only One Affected Critical', 'Both Affected Critical', 'Only One Instance deleted', 'Both Instances deleted'
-        , 'New Clone', 'Analysis Error'
+        'Not Modified at All', 'New Clone', 'Only One Affected Critical', 'Both Affected Critical', 'Only One Instance deleted'
+        , 'Both Instances deleted', 'Analysis Error'
     )
     sizes = [
-        not_modified_count / run_count, one_instance_affected_critical_count / run_count
-        , both_instances_affected_critical_count / run_count, instance_deletion_count / run_count, both_instances_deleted_count / run_count
-        , clone_finding_count / run_count, len(failed_runs) / run_count
+        not_modified_count / run_count, clone_finding_count / run_count, one_instance_affected_critical_count / run_count
+        , both_instances_affected_critical_count / run_count, instance_deletion_count / run_count
+        , both_instances_deleted_count / run_count, len(failed_runs) / run_count
     ]
     idx = sizes.index(max(sizes))
     # all weights sum up to 1.0
     assert reduce(lambda a, b: a + b, sizes) == 1.0
-    explode = [0.07 if i == idx else 0.0 for i in range(7)]
-
-    """
-    css_colors = m_colors.CSS4_COLORS
-    color_set = (
-        css_colors.get("deepskyblue"), css_colors.get("lightgreen"), css_colors.get("green"), css_colors.get("mediumvioletred")
-        , css_colors.get("fuchsia"), css_colors.get("gold"), css_colors.get("firebrick")
-    )"""
+    # explode biggest slice
+    explode = [0.00 if i == idx else 0.0 for i in range(7)]
 
     tab_colors = m_colors.TABLEAU_COLORS
     color_set = (
-        tab_colors.get("tab:blue"), tab_colors.get("tab:green"), tab_colors.get("tab:olive"),
-        tab_colors.get("tab:purple")
-        , tab_colors.get("tab:pink"), tab_colors.get("tab:orange"), tab_colors.get("tab:red")
+        tab_colors.get("tab:blue"), tab_colors.get("tab:orange"), tab_colors.get("tab:green"), tab_colors.get("tab:olive")
+        , tab_colors.get("tab:purple"), tab_colors.get("tab:pink"), tab_colors.get("tab:red")
     )
 
     fig1, ax1 = plt.subplots(figsize=(12, 8))
     ax1.pie(sizes, explode=explode, labels=labels, autopct='%1.1f%%',
-            shadow=True, startangle=180, colors=color_set)
+            shadow=False, startangle=180, colors=color_set)
     ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+    my_circle = plt.Circle((0, 0), 0.7, color='white')
+    ax1.add_artist(my_circle)
     fig1.canvas.set_window_title("Broken Clone Lifecycles for " + project)
-    plt.legend()
+    plt.legend(loc=(0.82, 0.16))
     plt.show()
 
 
@@ -131,7 +128,7 @@ def run_analysis(client: TeamscaleClient):
             results: [AnalysisResult] = analyse_one_alert_commit(client, alert_commit.timestamp)
             successful_analysis_count += 1
             successful_runs.append((alert_commit.timestamp, results))
-        except Exception as e:
+        except (NotImplemented, TextSectionDeletedError):
             traceback.print_exc()
             printer.red("ERROR")
             failed_runs.append(alert_commit.timestamp)
@@ -158,7 +155,7 @@ def main(client: TeamscaleClient) -> None:
     read_and_plot()
     return
     run_analysis(client)
-    analyse_one_alert_commit(client, 1504177241000)
+    analyse_one_alert_commit(client, 1493636171000)
 
     get_clone_finding_churn(client, 1521580769000)
     get_repository_summary(client)
