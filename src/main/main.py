@@ -85,7 +85,7 @@ def plot_results(project: str, successful_runs, failed_runs):
     ax1.pie(sizes, explode=explode, labels=labels, autopct='%1.1f%%',
             shadow=True, startangle=90)
     ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-    fig1.canvas.set_window_title("Results for " + project)
+    fig1.canvas.set_window_title("Broken Clone Lifecycles for " + project)
     plt.legend()
     plt.show()
 
@@ -133,8 +133,8 @@ def main(client: TeamscaleClient) -> None:
 
     analyse_one_alert_commit(client, 1504177241000)
     return
-    read_and_plot()
     run_analysis(client)
+    read_and_plot()
 
     get_clone_finding_churn(client, 1521580769000)
     get_repository_summary(client)

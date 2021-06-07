@@ -130,8 +130,8 @@ def is_file_affected_at_clone_finding_churn(file_uniform_path: str, clone_findin
 
 
 def deletion_pre_check(relevant_interval: Interval, diff_desc: DiffDescription):
-    # filter the intervals within the relevant interval
-    intervals_inside: [(Interval, Interval)] = list(
+    # filter the intervals that overlap more than 90% with the relevant interval
+    overlapping_intervals: [(Interval, Interval)] = list(
         filter(
             lambda interval_tuple: (overlaps_more_than_threshold(interval_tuple[0], relevant_interval, 0.9)),
             zip(diff_desc.left_change_line_intervals, diff_desc.right_change_line_intervals)
@@ -139,12 +139,13 @@ def deletion_pre_check(relevant_interval: Interval, diff_desc: DiffDescription):
     )
 
     x = 0
-    for left_interval, right_interval in intervals_inside:
+    for left_interval, right_interval in overlapping_intervals:
         left_length = get_interval_length(left_interval)
         right_length = get_interval_length(right_interval)
         x += (right_length - left_length)
 
     relevant_interval_length = get_interval_length(relevant_interval)
+    # if the overlapping intervals are mostly line deletions -> the relevant clone section is also deleted
     if relevant_interval_length + x < 0.2 * relevant_interval_length:
         # more than 80% of the relevant clone section is deleted for sure
         raise TextSectionDeletedError("more than 80% of the relevant clone section is deleted for sure.")
@@ -158,7 +159,7 @@ def correct_lines(loc_start_line: int, loc_end_line: int, diff_desc: DiffDescrip
     :return the corrected line number respecting the diff"""
     if "line-based" not in diff_desc.name.value:
         raise ValueError('DiffDescription should be a kind of line based diff.')
-    # the Interval which start and end location should be corrected
+    # the Interval whose start and end location should be corrected
     loc_interval: Interval = portion.closedopen(loc_start_line, loc_end_line)
 
     deletion_pre_check(loc_interval, diff_desc)
