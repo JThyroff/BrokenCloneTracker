@@ -30,22 +30,7 @@ def show_projects(client: TeamscaleClient) -> None:
     printer.separator()
 
 
-def plot_results(project: str, successful_runs, failed_runs):
-    printer.blue("Successful runs: ", LogLevel.RELEVANT)
-    printer.white(", ".join(str(entry[0]) for entry in successful_runs), LogLevel.RELEVANT)
-    printer.blue("Failed runs: ", LogLevel.RELEVANT)
-    printer.red(", ".join(str(commit_timestamp) for commit_timestamp in failed_runs), LogLevel.RELEVANT)
-
-    successful_result_count = reduce(lambda a, b: a + b, (len(entry[1]) for entry in successful_runs))
-    run_count = len(failed_runs) + successful_result_count
-    printer.separator(LogLevel.RELEVANT)
-    printer.blue(
-        "Successful run count:\t\t" + str(len(successful_runs))
-        + "\nSuccessful result count:\t" + str(successful_result_count)
-        + "\nFailed result count:\t\t" + str(len(failed_runs))
-        , LogLevel.RELEVANT
-    )
-
+def plot_pie(project: str, successful_runs, failed_runs, successful_result_count):
     not_modified_count = 0
     one_instance_affected_critical_count = 0
     both_instances_affected_critical_count = 0
@@ -83,6 +68,7 @@ def plot_results(project: str, successful_runs, failed_runs):
         'Not Modified at All', 'New Clone', 'Only One Affected Critical', 'Both Affected Critical', 'Only One Instance deleted'
         , 'Both Instances deleted', 'Analysis Error'
     )
+    run_count = len(failed_runs) + successful_result_count
     sizes = [
         not_modified_count / run_count, clone_finding_count / run_count, one_instance_affected_critical_count / run_count
         , both_instances_affected_critical_count / run_count, instance_deletion_count / run_count
@@ -91,8 +77,6 @@ def plot_results(project: str, successful_runs, failed_runs):
     idx = sizes.index(max(sizes))
     # all weights sum up to 1.0
     assert reduce(lambda a, b: a + b, sizes) == 1.0
-    # explode biggest slice
-    explode = [0.00 if i == idx else 0.0 for i in range(7)]
 
     tab_colors = m_colors.TABLEAU_COLORS
     color_set = (
@@ -101,13 +85,89 @@ def plot_results(project: str, successful_runs, failed_runs):
     )
 
     fig1, ax1 = plt.subplots(figsize=(12, 8))
-    ax1.pie(sizes, explode=explode, labels=labels, autopct='%1.1f%%',
-            shadow=False, startangle=180, colors=color_set)
+    ax1.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=False, startangle=180, colors=color_set)
     ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
     my_circle = plt.Circle((0, 0), 0.7, color='white')
     ax1.add_artist(my_circle)
     fig1.canvas.set_window_title("Broken Clone Lifecycles for " + project)
     plt.legend(loc=(-0.14, -0.12))
+    fig1.tight_layout()
+
+
+def plot_violin_plot(project, successful_runs, failed_runs):
+    fig, axs = plt.subplots(figsize=(10, 6))
+
+    one_file_affected_count_list = []
+    both_files_affected_critical_count_list = []
+    one_instance_affected_critical_count_list = []
+    both_instances_affected_critical_count_list = []
+    # instance metrics
+    file_affected_count_list = []
+    affected_critical_count_list = []
+
+    clone_findings_count_list = []
+
+    for run in successful_runs:
+        alert_commit_timestamp, results = run
+        for r in results:
+            one_file_affected_count_list.append(r.one_file_affected_count)
+            both_files_affected_critical_count_list.append(r.both_files_affected_count)
+            one_instance_affected_critical_count_list.append(r.one_instance_affected_critical_count)
+            both_instances_affected_critical_count_list.append(r.both_instances_affected_critical_count)
+            file_affected_count_list.append(r.instance_metrics.file_affected_count)
+            file_affected_count_list.append(r.sibling_instance_metrics.file_affected_count)
+            affected_critical_count_list.append(r.instance_metrics.affected_critical_count)
+            affected_critical_count_list.append(r.sibling_instance_metrics.affected_critical_count)
+            clone_findings_count_list.append(r.clone_findings_count)
+            # clone.instance_metrics.deleted
+
+    all_data = [
+        affected_critical_count_list, one_instance_affected_critical_count_list, both_instances_affected_critical_count_list
+        , file_affected_count_list, one_file_affected_count_list, both_files_affected_critical_count_list, clone_findings_count_list
+    ]
+
+    # plot violin plot
+    axs.violinplot(all_data, showmeans=False, showmedians=True, vert=False)
+    axs.set_title('Instance Metrics')
+
+    # adding vertical grid lines
+    axs.xaxis.grid(True)
+    total = []
+    for i in all_data:
+        total += i
+    axs.set_xticks([x for x in range(max(total) + 1)])
+
+    # add y-tick labels
+    plt.setp(
+        axs
+        , yticks=[y + 1 for y in range(len(all_data))]
+        , yticklabels=[
+            'Affected Critical', 'One Instance Affected Critical', 'Both Instances Affected Critical', 'File Affected', 'One File Affected'
+            , 'Both Files Affected', 'New Clone Findings'
+        ]
+    )
+    fig.canvas.set_window_title("Broken Clone Lifecycle Metrics for " + project)
+    fig.tight_layout()
+
+
+def plot_results(project: str, successful_runs, failed_runs):
+    printer.blue("Successful runs: ", LogLevel.RELEVANT)
+    printer.white(", ".join(str(entry[0]) for entry in successful_runs), LogLevel.RELEVANT)
+    printer.blue("Failed runs: ", LogLevel.RELEVANT)
+    printer.red(", ".join(str(commit_timestamp) for commit_timestamp in failed_runs), LogLevel.RELEVANT)
+
+    successful_result_count = reduce(lambda a, b: a + b, (len(entry[1]) for entry in successful_runs))
+    printer.separator(LogLevel.RELEVANT)
+    printer.blue(
+        "Successful run count:\t\t" + str(len(successful_runs))
+        + "\nSuccessful result count:\t" + str(successful_result_count)
+        + "\nFailed result count:\t\t" + str(len(failed_runs))
+        , LogLevel.RELEVANT
+    )
+
+    plot_pie(project, successful_runs, failed_runs, successful_result_count)
+    plot_violin_plot(project, successful_runs, failed_runs)
+
     plt.show()
 
 
