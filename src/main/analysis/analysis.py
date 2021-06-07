@@ -78,6 +78,10 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
             step = analysis_start + analysis_step
             if step > repository_summary[1]:
                 step = repository_summary[1]
+            if analysis_result.sibling_instance_metrics.deleted and analysis_result.instance_metrics.deleted:
+                printer.yellow("Both relevant sections are deleted. Skipping rest of analysis.", level=LogLevel.VERBOSE)
+                analysis_result.analysed_until = repository_summary[1]
+                break
             # get repository data in chunks - this was to be able to write temporary results to a file
             # this is maybe unnecessary yet
             new_commits = get_repository_commits(client, analysis_start, step)

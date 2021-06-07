@@ -2,6 +2,7 @@ import time
 import traceback
 from functools import reduce
 
+import matplotlib.colors as m_colors
 import matplotlib.pyplot as plt
 from teamscale_client import TeamscaleClient
 
@@ -44,11 +45,12 @@ def plot_results(project: str, successful_runs, failed_runs):
         , LogLevel.RELEVANT
     )
 
-    clone_finding_count = 0
-    one_instance_affected_critical_count = 0
-    instance_deletion_count = 0
-    both_instances_affected_critical_count = 0
     not_modified_count = 0
+    one_instance_affected_critical_count = 0
+    both_instances_affected_critical_count = 0
+    instance_deletion_count = 0
+    both_instances_deleted_count = 0
+    clone_finding_count = 0
     # Interpretation of the result and categorization of the findings
     # Importance:   0. Error while analysing            -> Fix code or special handling
     #               1. New clone finding                -> The broken clone seems to appear as normal clone afterwards
@@ -64,6 +66,8 @@ def plot_results(project: str, successful_runs, failed_runs):
             result: AnalysisResult
             if result.clone_findings_count != 0:
                 clone_finding_count += 1
+            elif result.instance_metrics.deleted and result.sibling_instance_metrics.deleted:
+                both_instances_deleted_count += 1
             elif result.instance_metrics.deleted or result.sibling_instance_metrics.deleted:
                 instance_deletion_count += 1
             elif result.one_file_affected_count != 0:
@@ -73,17 +77,37 @@ def plot_results(project: str, successful_runs, failed_runs):
             else:
                 not_modified_count += 1
 
-    labels = 'Not Modified at All', 'Only One Affected Critical', 'New Clone', 'Error', 'Both Affected Critical', 'Instance deletion'
+    labels = (
+        'Not Modified at All', 'Only One Affected Critical', 'Both Affected Critical', 'Only One Instance deleted', 'Both Instances deleted'
+        , 'New Clone', 'Analysis Error'
+    )
     sizes = [
-        not_modified_count / run_count, one_instance_affected_critical_count / run_count,
-        clone_finding_count / one_instance_affected_critical_count, len(failed_runs) / run_count,
-        both_instances_affected_critical_count / run_count, instance_deletion_count / run_count
+        not_modified_count / run_count, one_instance_affected_critical_count / run_count
+        , both_instances_affected_critical_count / run_count, instance_deletion_count / run_count, both_instances_deleted_count / run_count
+        , clone_finding_count / run_count, len(failed_runs) / run_count
     ]
-    explode = (0.0, 0.1, 0.0, 0.0, 0.0, 0.0)
+    idx = sizes.index(max(sizes))
+    # all weights sum up to 1.0
+    assert reduce(lambda a, b: a + b, sizes) == 1.0
+    explode = [0.07 if i == idx else 0.0 for i in range(7)]
+
+    """
+    css_colors = m_colors.CSS4_COLORS
+    color_set = (
+        css_colors.get("deepskyblue"), css_colors.get("lightgreen"), css_colors.get("green"), css_colors.get("mediumvioletred")
+        , css_colors.get("fuchsia"), css_colors.get("gold"), css_colors.get("firebrick")
+    )"""
+
+    tab_colors = m_colors.TABLEAU_COLORS
+    color_set = (
+        tab_colors.get("tab:blue"), tab_colors.get("tab:green"), tab_colors.get("tab:olive"),
+        tab_colors.get("tab:purple")
+        , tab_colors.get("tab:pink"), tab_colors.get("tab:orange"), tab_colors.get("tab:red")
+    )
 
     fig1, ax1 = plt.subplots(figsize=(12, 8))
     ax1.pie(sizes, explode=explode, labels=labels, autopct='%1.1f%%',
-            shadow=True, startangle=90)
+            shadow=True, startangle=180, colors=color_set)
     ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
     fig1.canvas.set_window_title("Broken Clone Lifecycles for " + project)
     plt.legend()
@@ -117,7 +141,7 @@ def run_analysis(client: TeamscaleClient):
 
     result_dict = {"successful runs": successful_runs, "failed runs": failed_runs}
     write_to_file(get_result_file_name(client.project), result_dict)
-    plot_results(successful_runs, failed_runs)
+    plot_results(client.project, successful_runs, failed_runs)
     return
 
 
@@ -131,10 +155,10 @@ def main(client: TeamscaleClient) -> None:
         failed_runs = result_dict.get("failed runs")
         plot_results(client.project, successful_runs, failed_runs)
 
-    analyse_one_alert_commit(client, 1504177241000)
+    read_and_plot()
     return
     run_analysis(client)
-    read_and_plot()
+    analyse_one_alert_commit(client, 1504177241000)
 
     get_clone_finding_churn(client, 1521580769000)
     get_repository_summary(client)
