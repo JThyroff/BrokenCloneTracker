@@ -130,3 +130,5 @@ dmypy.json
 
 # ignore persistent saved projects
 projects/*
+# ignore out
+out/*
