@@ -66,7 +66,8 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
         # region logging
         printer.separator(level=LogLevel.VERBOSE)
         printer.yellow("Analysing " + str(commit_alert), level=LogLevel.VERBOSE)
-        printer.yellow(commit_alert.get_link(client, alert_commit_timestamp), level=LogLevel.VERBOSE)
+        printer.white("Link to Broken Clone: " + commit_alert.get_broken_clone_link(client, alert_commit_timestamp), level=LogLevel.VERBOSE)
+        printer.white("Link to Old Clone: " + commit_alert.get_old_clone_link(client, alert_commit_timestamp), level=LogLevel.VERBOSE)
         printer.separator(LogLevel.VERBOSE)
         # endregion
         # start analysis
@@ -122,7 +123,7 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                 if not clone_finding_churn.is_empty():
 
                     printer.yellow(str(clone_finding_churn), level=LogLevel.INFO)
-                    for s in clone_finding_churn.get_finding_links(client):
+                    for s in clone_finding_churn.get_finding_links(client, commit.timestamp):
                         printer.blue(s, level=LogLevel.INFO)
                     if clone_finding_churn.is_relevant():
                         analysis_result.clone_findings_count += 1

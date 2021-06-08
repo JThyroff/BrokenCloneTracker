@@ -131,8 +131,8 @@ class CommitAlert(object):
                 self.context.expected_sibling_location.uniform_path + "\nSibling interval: "
                 + self.context.expected_sibling_location.get_interval())
 
-    def get_link(self, client: TeamscaleClient, commit_timestamp: int) -> str:
-
+    def get_broken_clone_link(self, client: TeamscaleClient, commit_timestamp: int) -> str:
+        # return link to broken clone
         return (client.url + "/compare.html#/"
                 + client.project + "/" + self.context.expected_sibling_location.uniform_path + "#@#"
                 + client.branch + ":" + str(commit_timestamp) + "#&#"
@@ -143,6 +143,13 @@ class CommitAlert(object):
                 + str(self.context.expected_clone_location.raw_start_line) + "-"
                 + str(self.context.expected_clone_location.raw_end_line)
                 + "#&#isInconsistentClone")
+
+    def get_old_clone_link(self, client: TeamscaleClient, commit_timestamp: int) -> str:
+        # return link to old clone
+        return (
+                client.url + "/findings.html#details/" + client.project + "/?id=" + self.context.removed_clone_id
+                + "&t=" + client.branch + "%3A" + str(commit_timestamp) + "p1"
+        )
 
     @classmethod
     def from_json(cls, json):
@@ -278,8 +285,11 @@ class CloneFinding:
                    and self.properties == other.properties and self.analysis_timestamp == other.analysis_timestamp \
                    and self.type_id == other.type_id
 
-    def get_finding_link(self, client: TeamscaleClient):
-        return client.url + "/findings.html#details/" + client.project + "/?id=" + self.finding_id
+    def get_finding_link(self, client: TeamscaleClient, commit_timestamp: int):
+        return (
+                client.url + "/findings.html#details/" + client.project + "/?id=" + self.finding_id
+                + "&t=" + client.branch + "%3A" + str(commit_timestamp) + "p1"
+        )
 
     @classmethod
     def from_json(cls, json):
@@ -342,15 +352,16 @@ class CloneFindingChurn:
                    and self.removed_findings == other.removed_findings \
                    and self.findings_removed_in_branch == other.findings_removed_in_branch
 
-    def get_finding_links(self, client: TeamscaleClient) -> [str]:
-        """returns a list of weblinks to the findings"""
+    def get_finding_links(self, client: TeamscaleClient, commit_timestamp: int) -> [str]:
+        """returns a list of weblinks to the findings
+        """
         joined = self.added_findings + self.findings_added_in_branch + self.findings_in_changed_code + \
                  self.removed_findings + \
                  self.findings_removed_in_branch
         links: [str] = []
         for clone_finding in joined:
             clone_finding: CloneFinding
-            links.append(clone_finding.get_finding_link(client))
+            links.append(clone_finding.get_finding_link(client, commit_timestamp))
         return links
 
     def is_relevant(self):  # TODO adjust findings in changed code
