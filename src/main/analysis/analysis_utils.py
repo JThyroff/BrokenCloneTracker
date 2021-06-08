@@ -73,8 +73,8 @@ class AnalysisResult:
                 + "\nCorrected sibling interval: " + self.sibling_instance_metrics.get_corrected_interval()
                 + "\nOne file affected count: " + str(self.one_file_affected_count)
                 + "\nBoth files affected count: " + str(self.both_files_affected_count)
-                + "\nOne file affected critical count: " + str(self.one_instance_affected_critical_count)
-                + "\nBoth files affected critical count: " + str(self.both_instances_affected_critical_count)
+                + "\nOne instance affected critical count: " + str(self.one_instance_affected_critical_count)
+                + "\nBoth instances affected critical count: " + str(self.both_instances_affected_critical_count)
                 + "\nRelevant clone findings count: " + str(self.clone_findings_count))
 
     @staticmethod
