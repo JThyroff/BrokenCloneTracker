@@ -4,9 +4,10 @@ from functools import reduce
 
 import matplotlib.colors as m_colors
 import matplotlib.pyplot as plt
+import numpy as np
 from teamscale_client import TeamscaleClient
 
-from defintions import get_result_file_name
+from defintions import get_result_file_name, get_window_title
 from src.main.analysis.analysis import update_filtered_alert_commits, analyse_one_alert_commit
 from src.main.analysis.analysis_utils import are_left_lines_affected_at_diff, is_file_affected_at_file_changes, AnalysisResult, \
     TextSectionDeletedError
@@ -65,8 +66,8 @@ def plot_pie(project: str, successful_runs, failed_runs, successful_result_count
                 not_modified_count += 1
 
     labels = (
-        'Not Modified at All', 'New Clone', 'Only One Affected Critical', 'Both Affected Critical', 'Only One Instance deleted'
-        , 'Both Instances deleted', 'Analysis Error'
+        'Not Modified at All', 'New Clone', 'Only One Affected Critical', 'Both Affected Critical', 'Only One Instance Deleted'
+        , 'Both Instances Deleted', 'Analysis Error'
     )
     run_count = len(failed_runs) + successful_result_count
     sizes = [
@@ -89,7 +90,7 @@ def plot_pie(project: str, successful_runs, failed_runs, successful_result_count
     ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
     my_circle = plt.Circle((0, 0), 0.7, color='white')
     ax1.add_artist(my_circle)
-    fig1.canvas.set_window_title("Broken Clone Lifecycles for " + project)
+    fig1.canvas.set_window_title(get_window_title(project))
     plt.legend(loc=(-0.14, -0.12))
     fig1.tight_layout()
 
@@ -136,17 +137,60 @@ def plot_violin_plot(project, successful_runs, failed_runs):
     for i in all_data:
         total += i
     axs.set_xticks([x for x in range(max(total) + 1)])
-
     # add y-tick labels
     plt.setp(
-        axs
-        , yticks=[y + 1 for y in range(len(all_data))]
+        axs, yticks=[y + 1 for y in range(len(all_data))]
         , yticklabels=[
             'Affected Critical', 'One Instance Affected Critical', 'Both Instances Affected Critical', 'File Affected', 'One File Affected'
             , 'Both Files Affected', 'New Clone Findings'
         ]
     )
-    fig.canvas.set_window_title("Broken Clone Lifecycle Metrics for " + project)
+    axs.invert_yaxis()
+    fig.canvas.set_window_title(get_window_title(project))
+    fig.tight_layout()
+
+
+def plot_bar(project, successful_runs, successful_result_count):
+    instance_deleted_count = 0
+    sibling_deleted_count = 0
+    one_instance_deleted_count = 0
+    both_instances_deleted_count = 0
+    for run in successful_runs:
+        alert_commit_timestamp, results = run
+        for r in results:
+            if r.instance_metrics.deleted:
+                instance_deleted_count += 1
+            if r.sibling_instance_metrics.deleted:
+                sibling_deleted_count += 1
+            if r.instance_metrics.deleted and r.sibling_instance_metrics.deleted:
+                both_instances_deleted_count += 1
+            elif r.instance_metrics.deleted or r.sibling_instance_metrics.deleted:
+                one_instance_deleted_count += 1
+    labels = ['Instance Deleted', 'Sibling Deleted', 'One Instance Deleted', 'Both Instances Deleted']
+    true_count = [instance_deleted_count, sibling_deleted_count, one_instance_deleted_count, both_instances_deleted_count]
+    false_count = [
+        successful_result_count - instance_deleted_count, successful_result_count - sibling_deleted_count
+        , successful_result_count - one_instance_deleted_count, successful_result_count - both_instances_deleted_count
+    ]
+    for i, j in zip(true_count, false_count):
+        assert (i + j) == successful_result_count
+
+    y = np.arange(len(labels))  # the label locations
+    width = 0.35  # the width of the bars
+
+    fig, ax = plt.subplots()
+    rects1 = ax.barh(y - width / 2, true_count, width, label='True')
+    rects2 = ax.barh(y + width / 2, false_count, width, label='False')
+
+    # Add some text for labels, title and custom y-axis tick labels, etc.
+    ax.set_yticks(y)
+    ax.set_yticklabels(labels)
+    ax.invert_yaxis()
+    ax.legend()
+
+    #    ax.bar_label(rects1, padding=3)
+    #   ax.bar_label(rects2, padding=3)
+    fig.canvas.set_window_title(get_window_title(project))
     fig.tight_layout()
 
 
@@ -165,8 +209,9 @@ def plot_results(project: str, successful_runs, failed_runs):
         , LogLevel.RELEVANT
     )
 
-    plot_pie(project, successful_runs, failed_runs, successful_result_count)
     plot_violin_plot(project, successful_runs, failed_runs)
+    plot_pie(project, successful_runs, failed_runs, successful_result_count)
+    plot_bar(project, successful_runs, successful_result_count)
 
     plt.show()
 

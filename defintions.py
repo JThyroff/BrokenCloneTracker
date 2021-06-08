@@ -5,6 +5,7 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECTS_DIR = 'projects'
 # endregion
 
+WINDOW_TITLE = 'Broken Clone Lifecycle Analysis for '
 
 FILE_NAME_ALERT = 'alerts.json'
 FILE_NAME_RESULT = 'results.json'
@@ -22,3 +23,7 @@ def get_alert_file_name(project: str) -> str:
 
 def get_result_file_name(project: str) -> str:
     return get_project_dir(project) + '/' + FILE_NAME_RESULT
+
+
+def get_window_title(project: str) -> str:
+    return WINDOW_TITLE + project
