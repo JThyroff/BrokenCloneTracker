@@ -134,14 +134,14 @@ class CommitAlert(object):
     def get_broken_clone_link(self, client: TeamscaleClient, commit_timestamp: int) -> str:
         # return link to broken clone
         return (client.url + "/compare.html#/"
-                + client.project + "/" + self.context.expected_sibling_location.uniform_path + "#@#"
-                + client.branch + ":" + str(commit_timestamp) + "#&#"
                 + client.project + "/" + self.context.expected_clone_location.uniform_path + "#@#"
                 + client.branch + ":" + str(commit_timestamp) + "#&#"
-                + str(self.context.expected_sibling_location.raw_start_line) + "-"
-                + str(self.context.expected_sibling_location.raw_end_line) + ":"
+                + client.project + "/" + self.context.expected_sibling_location.uniform_path + "#@#"
+                + client.branch + ":" + str(commit_timestamp) + "#&#"
                 + str(self.context.expected_clone_location.raw_start_line) + "-"
-                + str(self.context.expected_clone_location.raw_end_line)
+                + str(self.context.expected_clone_location.raw_end_line) + ":"
+                + str(self.context.expected_sibling_location.raw_start_line) + "-"
+                + str(self.context.expected_sibling_location.raw_end_line)
                 + "#&#isInconsistentClone")
 
     def get_old_clone_link(self, client: TeamscaleClient, commit_timestamp: int) -> str:
