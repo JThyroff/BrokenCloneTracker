@@ -365,7 +365,11 @@ class CloneFindingChurn:
         return links
 
     def is_relevant(self):  # TODO adjust findings in changed code
-        return self.added_findings or self.findings_added_in_branch or self.findings_in_changed_code
+        for clone_finding in self.added_findings + self.findings_added_in_branch + self.findings_in_changed_code:
+            clone_finding: CloneFinding
+            if clone_finding.death_commit is None:
+                return True
+        return False
 
     def is_empty(self):
         return not (self.added_findings or self.findings_added_in_branch or self.findings_in_changed_code
