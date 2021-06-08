@@ -12,6 +12,7 @@ from src.main.api.api import (
 from src.main.api.data import CommitAlert, Commit, FileChange, DiffType, DiffDescription, CloneFindingChurn
 from src.main.persistence import AlertFile, read_alert_file, write_to_file
 from src.main.pretty_print import MyPrinter, LogLevel, SEPARATOR
+from src.main.utils.time_utils import timestamp_to_str
 
 printer: MyPrinter = MyPrinter(LogLevel.DEBUG)
 
@@ -43,7 +44,7 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
     """Analyzes one given alert commit. This function scans all commits after the given timestamp for relevant changes
     in the code base."""
     printer.yellow("Analysing one alert commit...", level=LogLevel.INFO)
-    printer.white("Timestamp : " + str(alert_commit_timestamp), level=LogLevel.INFO)
+    printer.white("Timestamp : " + timestamp_to_str(alert_commit_timestamp), level=LogLevel.INFO)
 
     alerts: dict[Commit, [CommitAlert]] = get_commit_alerts(client, alert_commit_timestamp)
 
@@ -121,7 +122,6 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                 clone_finding_churn: CloneFindingChurn = get_clone_finding_churn(client, commit.timestamp)
                 clone_finding_churn = filter_clone_finding_churn_by_file([expected_file, expected_sibling], clone_finding_churn)
                 if not clone_finding_churn.is_empty():
-
                     printer.yellow(str(clone_finding_churn), level=LogLevel.INFO)
                     for s in clone_finding_churn.get_finding_links(client, commit.timestamp):
                         printer.blue(s, level=LogLevel.INFO)
@@ -162,7 +162,9 @@ def check_file(file: str, client: TeamscaleClient, commit_timestamp: int, previo
     whether the relevant text passage is modified in this commit."""
     if is_file_affected_at_file_changes(file, affected_files):
         file_name = file.split('/')[-1]
-        printer.white("{0:51}".format(file_name + " affected at commit:") + str(commit_timestamp), level=LogLevel.VERBOSE)
+        printer.white(
+            "{0:51}".format(file_name + " affected at commit:") + timestamp_to_str(commit_timestamp), level=LogLevel.VERBOSE
+        )
 
         diff_dict, link = get_diff(client, file, previous_commit_timestamp, file, commit_timestamp)
         diff_dict: dict[DiffType, DiffDescription]
