@@ -182,8 +182,8 @@ def correct_lines(loc_start_line: int, loc_end_line: int, diff_desc: DiffDescrip
     above. This function addresses this issue and corrects the given line numbers respecting the diff.
     It basically adds the diff of the lines above the relevant part to its line numbers.
     :return the corrected line number respecting the diff"""
-    if "line-based" not in diff_desc.name.value:
-        raise ValueError('DiffDescription should be a kind of line based diff.')
+    # if "line-based" not in diff_desc.name.value:
+    # raise ValueError('DiffDescription should be a kind of line based diff.')
     # the Interval whose start and end location should be corrected
     loc_interval: Interval = portion.closedopen(loc_start_line, loc_end_line)
 
@@ -194,7 +194,17 @@ def correct_lines(loc_start_line: int, loc_end_line: int, diff_desc: DiffDescrip
         right_length = get_interval_length(right_interval)
         # [4,6) -> [4,5)
         x = right_length - left_length
-        if left_interval < loc_interval:
+        if left_interval.empty:
+            new_interval: Interval = portion.closedopen(loc_start_line, loc_end_line)
+            assert x > 0
+            if right_interval < new_interval:
+                loc_start_line = loc_start_line + x
+                loc_end_line = loc_end_line + x
+            elif right_interval > new_interval:
+                pass
+            else:
+                raise NotImplementedError("I currently do not know how to handle this special case")
+        elif left_interval < loc_interval:
             # the modification is entirely above the relevant text passage -> need to adjust start and end line
             loc_start_line = loc_start_line + x
             loc_end_line = loc_end_line + x

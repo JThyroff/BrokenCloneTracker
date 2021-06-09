@@ -181,12 +181,19 @@ def check_file(file: str, client: TeamscaleClient, commit_timestamp: int, previo
                 instance_metrics.corrected_start_line, instance_metrics.corrected_end_line, diff_dict.get(DiffType.TOKEN_BASED)
         ):
             instance_metrics.affected_critical_count += 1
-            printer.red(file_name + " affected critical", LogLevel.INFO)
+            printer.red(
+                file_name + " affected critical."
+                + " interval [" + str(instance_metrics.corrected_start_line) + "-" + str(instance_metrics.corrected_end_line) + ")"
+                , LogLevel.INFO
+            )
             printer.blue(link, LogLevel.INFO)
             return Affectedness.AFFECTED_CRITICAL
         else:
             instance_metrics.file_affected_count += 1
-            printer.white(file_name + " is not affected critical", LogLevel.DEBUG)
+            printer.white(
+                file_name + " is not affected critical."
+                + " interval [" + str(instance_metrics.corrected_start_line) + "-" + str(instance_metrics.corrected_end_line) + ")"
+                , LogLevel.DEBUG)
             printer.blue(link, LogLevel.DEBUG)
             return Affectedness.AFFECTED_BY_COMMIT
     else:
