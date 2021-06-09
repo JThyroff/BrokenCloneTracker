@@ -202,6 +202,8 @@ def correct_lines(loc_start_line: int, loc_end_line: int, diff_desc: DiffDescrip
                 loc_end_line = loc_end_line + x
             elif right_interval > new_interval:
                 pass
+            elif right_interval in new_interval:
+                loc_end_line = loc_end_line + x
             else:
                 raise NotImplementedError("I currently do not know how to handle this special case")
         elif left_interval < loc_interval:
