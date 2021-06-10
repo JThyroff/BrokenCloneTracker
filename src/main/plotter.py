@@ -73,7 +73,7 @@ def plot_pie(project: str, successful_runs, failed_runs, successful_result_count
     fig1.tight_layout()
 
 
-def plot_instance_metrics(project, successful_runs, failed_runs, boxplot=False):
+def plot_instance_metrics(project, successful_runs, failed_runs, boxplot=False, with_file_affections=True):
     fig, axs = plt.subplots(figsize=(10, 6))
 
     one_file_affected_count_list = []
@@ -99,10 +99,16 @@ def plot_instance_metrics(project, successful_runs, failed_runs, boxplot=False):
             affected_critical_count_list.append(r.sibling_instance_metrics.affected_critical_count)
             clone_findings_count_list.append(r.clone_findings_count)
 
-    all_data = [
-        affected_critical_count_list, one_instance_affected_critical_count_list, both_instances_affected_critical_count_list
-        , file_affected_count_list, one_file_affected_count_list, both_files_affected_critical_count_list, clone_findings_count_list
-    ]
+    if with_file_affections:
+        all_data = [
+            affected_critical_count_list, one_instance_affected_critical_count_list, both_instances_affected_critical_count_list
+            , file_affected_count_list, one_file_affected_count_list, both_files_affected_critical_count_list, clone_findings_count_list
+        ]
+    else:
+        all_data = [
+            affected_critical_count_list, one_instance_affected_critical_count_list, both_instances_affected_critical_count_list
+            , clone_findings_count_list
+        ]
 
     # plot violin plot
     if boxplot:
@@ -118,11 +124,14 @@ def plot_instance_metrics(project, successful_runs, failed_runs, boxplot=False):
         total += i
     axs.set_xticks([x for x in range(0, max(total) + 1, 5)])
     # add y-tick labels
+
     plt.setp(
         axs, yticks=[y + 1 for y in range(len(all_data))]
         , yticklabels=[
             'Affected Critical', 'One Instance Affected Critical', 'Both Instances Affected Critical', 'File Affected', 'One File Affected'
             , 'Both Files Affected', 'New Clone Findings'
+        ] if with_file_affections else [
+            'Affected Critical', 'One Instance Affected Critical', 'Both Instances Affected Critical', 'New Clone Findings'
         ]
     )
     axs.invert_yaxis()

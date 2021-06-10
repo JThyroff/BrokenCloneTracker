@@ -47,8 +47,8 @@ def plot_results(project: str, successful_runs, failed_runs):
 
     plot_pie(project, successful_runs, failed_runs, successful_result_count)
     plot_bar(project, successful_runs, successful_result_count)
-    plot_instance_metrics(project, successful_runs, failed_runs, boxplot=True)
-    plot_instance_metrics(project, successful_runs, failed_runs)
+    plot_instance_metrics(project, successful_runs, failed_runs, boxplot=True, with_file_affections=False)
+    plot_instance_metrics(project, successful_runs, failed_runs, with_file_affections=False)
 
     plt.show()
 
