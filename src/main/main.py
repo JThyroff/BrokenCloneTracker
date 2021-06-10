@@ -97,11 +97,6 @@ def main(client: TeamscaleClient) -> None:
     analyse_one_alert_commit(client, 1356517490000)
     read_and_plot()
 
-    get_clone_finding_churn(client, 1521580769000)
-    get_repository_summary(client)
-
-    show_projects(client)
-
 
 if __name__ == "__main__":
     teamscale_client = parse_args()
