@@ -325,13 +325,13 @@ class CloneFindingChurn:
         self.findings_removed_in_branch = findings_removed_in_branch
 
     def __str__(self):
-        to_return = "Clone Finding Churn for commit: " + str(self.commit.timestamp) + "\n"
+        to_return = "Clone Finding Churn for commit: " + str(self.commit.timestamp)
         if self.added_findings:
-            to_return += "\nAdded findings = "
+            to_return += "\n\nAdded findings = "
             to_return += ',\n'.join(map(str, self.added_findings))
         if self.findings_added_in_branch:
             to_return += "\n\nFindings added in branch = "
-            to_return += ', '.join(map(str, self.findings_added_in_branch))
+            to_return += ',\n '.join(map(str, self.findings_added_in_branch))
         if self.findings_in_changed_code:
             to_return += "\n\nFindings in changed code = "
             to_return += ',\n'.join(map(str, self.findings_in_changed_code))
@@ -342,7 +342,7 @@ class CloneFindingChurn:
             to_return += "\n\nFindings removed in branch = "
             to_return += ',\n'.join(map(str, self.findings_removed_in_branch))
         if self.is_empty():
-            to_return = to_return[:-1] + " NO  CHURN"
+            to_return = to_return + " NO  CHURN"
         return to_return
 
     def __eq__(self, other):
