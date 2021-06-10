@@ -8,7 +8,7 @@ from src.main.api.data import FileChange, DiffDescription, CloneFindingChurn, Cl
     CommitAlertContext
 from src.main.pretty_print import SEPARATOR
 from src.main.utils.interval_utils import get_interval_length, overlaps_more_than_threshold
-from src.main.utils.time_utils import display_time
+from src.main.utils.time_utils import display_time, timestamp_to_str
 
 
 class TextSectionDeletedError(Exception):
@@ -60,8 +60,8 @@ class AnalysisResult:
     clone_findings_count: int = 0
 
     def __str__(self):
-        return ("Analysis Result for " + self.project + ": first commit: " + str(self.first_commit) + ", most recent commit: "
-                + str(self.most_recent_commit) + ", analysed until: " + str(self.analysed_until)
+        return ("Analysis Result for " + self.project + ": first commit: " + timestamp_to_str(self.first_commit) + ", most recent commit: "
+                + timestamp_to_str(self.most_recent_commit) + ", analysed until: " + timestamp_to_str(self.analysed_until)
                 + "\n" + SEPARATOR
                 + "\n" + str(self.commit_alert)
                 + "\n" + SEPARATOR
@@ -206,7 +206,7 @@ def correct_lines(loc_start_line: int, loc_end_line: int, diff_desc: DiffDescrip
                 loc_end_line = loc_end_line + x
             elif right_interval > new_interval:
                 pass
-            elif right_interval in new_interval:
+            elif right_interval.lower in new_interval:
                 loc_end_line = loc_end_line + x
             else:
                 raise NotImplementedError("I currently do not know how to handle this special case")

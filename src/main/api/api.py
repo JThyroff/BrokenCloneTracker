@@ -7,6 +7,7 @@ from defintions import JAVA_INT_MAX
 from src.main.api.api_utils import get_project_api_service_url, get_global_service_url
 from src.main.api.data import Commit, CommitAlert, FileChange, DiffDescription, DiffType, CloneFindingChurn
 from src.main.pretty_print import MyPrinter, LogLevel
+from src.main.utils.time_utils import timestamp_to_str
 
 printer: MyPrinter = MyPrinter(LogLevel.VERBOSE)
 
@@ -139,8 +140,10 @@ def get_repository_summary(client: TeamscaleClient) -> tuple[int, int]:
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
-    printer.white("First commit: " + str(parsed['firstCommit']) + ", Most recent commit: " + str(parsed['mostRecentCommit']),
-                  level=LogLevel.VERBOSE)
+    printer.white(
+        "First commit: " + timestamp_to_str(parsed['firstCommit']) + ", Most recent commit: " + timestamp_to_str(parsed['mostRecentCommit'])
+        , level=LogLevel.VERBOSE
+    )
     return parsed['firstCommit'], parsed['mostRecentCommit']
 
 
