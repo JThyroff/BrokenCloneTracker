@@ -61,7 +61,8 @@ class AnalysisResult:
 
     def __str__(self):
         return ("Analysis Result for " + self.project + ": first commit: " + timestamp_to_str(self.first_commit) + ", most recent commit: "
-                + timestamp_to_str(self.most_recent_commit) + ", analysed until: " + timestamp_to_str(self.analysed_until)
+                + timestamp_to_str(self.most_recent_commit) + ", "
+                + "\nanalysed until: " + timestamp_to_str(self.analysed_until)
                 + "\n" + SEPARATOR
                 + "\n" + str(self.commit_alert)
                 + "\n" + SEPARATOR
@@ -69,12 +70,13 @@ class AnalysisResult:
                 + "\nInstance affected critical count: " + str(self.instance_metrics.affected_critical_count)
                 + "\nInstance deleted: " + str(self.instance_metrics.deleted)
                 + "\nCorrected instance interval: " + self.instance_metrics.get_corrected_interval()
-                + "\nInstance time alive: " + display_time(self.instance_metrics.time_alive)
+                + "\nInstance time alive: " + display_time(self.instance_metrics.time_alive) + " ~ " + str(self.instance_metrics.time_alive)
                 + "\nSibling file affected count: " + str(self.sibling_instance_metrics.file_affected_count)
                 + "\nSibling instance affected critical count: " + str(self.sibling_instance_metrics.affected_critical_count)
                 + "\nSibling instance deleted: " + str(self.sibling_instance_metrics.deleted)
                 + "\nCorrected sibling interval: " + self.sibling_instance_metrics.get_corrected_interval()
                 + "\nSibling instance time alive: " + display_time(self.sibling_instance_metrics.time_alive)
+                + " ~ " + str(self.sibling_instance_metrics.time_alive)
                 + "\nOne file affected count: " + str(self.one_file_affected_count)
                 + "\nBoth files affected count: " + str(self.both_files_affected_count)
                 + "\nOne instance affected critical count: " + str(self.one_instance_affected_critical_count)
