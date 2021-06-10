@@ -8,6 +8,7 @@ from src.main.api.data import FileChange, DiffDescription, CloneFindingChurn, Cl
     CommitAlertContext
 from src.main.pretty_print import SEPARATOR
 from src.main.utils.interval_utils import get_interval_length, overlaps_more_than_threshold
+from src.main.utils.time_utils import display_time
 
 
 class TextSectionDeletedError(Exception):
@@ -33,6 +34,7 @@ class InstanceMetrics:
     file_affected_count: int = 0
     affected_critical_count: int = 0
     deleted: bool = False
+    time_alive = -1
 
     def get_corrected_interval(self) -> str:
         return "[" + str(self.corrected_start_line) + "," + str(self.corrected_end_line) + ")"
@@ -65,12 +67,14 @@ class AnalysisResult:
                 + "\n" + SEPARATOR
                 + "\nFile affected count: " + str(self.instance_metrics.file_affected_count)
                 + "\nInstance affected critical count: " + str(self.instance_metrics.affected_critical_count)
-                + "\nFile deleted: " + str(self.instance_metrics.deleted)
+                + "\nInstance deleted: " + str(self.instance_metrics.deleted)
                 + "\nCorrected instance interval: " + self.instance_metrics.get_corrected_interval()
+                + "\nInstance time alive: " + display_time(self.instance_metrics.time_alive)
                 + "\nSibling file affected count: " + str(self.sibling_instance_metrics.file_affected_count)
                 + "\nSibling instance affected critical count: " + str(self.sibling_instance_metrics.affected_critical_count)
-                + "\nSibling file deleted: " + str(self.sibling_instance_metrics.deleted)
+                + "\nSibling instance deleted: " + str(self.sibling_instance_metrics.deleted)
                 + "\nCorrected sibling interval: " + self.sibling_instance_metrics.get_corrected_interval()
+                + "\nSibling instance time alive: " + display_time(self.sibling_instance_metrics.time_alive)
                 + "\nOne file affected count: " + str(self.one_file_affected_count)
                 + "\nBoth files affected count: " + str(self.both_files_affected_count)
                 + "\nOne instance affected critical count: " + str(self.one_instance_affected_critical_count)
@@ -197,7 +201,7 @@ def correct_lines(loc_start_line: int, loc_end_line: int, diff_desc: DiffDescrip
         if left_interval.empty:
             new_interval: Interval = portion.closedopen(loc_start_line, loc_end_line)
             assert x > 0
-            if right_interval < new_interval:
+            if right_interval.lower < new_interval:  # insertion above the relevant text section
                 loc_start_line = loc_start_line + x
                 loc_end_line = loc_end_line + x
             elif right_interval > new_interval:
@@ -229,7 +233,7 @@ def correct_lines(loc_start_line: int, loc_end_line: int, diff_desc: DiffDescrip
             # what about the start line?
             loc_end_line = loc_end_line + x
         elif left_interval >= loc_interval:
-            # loc_start_line = loc_start_line + x
-            raise NotImplementedError("I currently do not know how to handle this special case")
+            # the relevant text section is modified in the last few lines, add them to the clone
+            loc_end_line = loc_end_line + x
 
     return loc_start_line, loc_end_line

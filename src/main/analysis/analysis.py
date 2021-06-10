@@ -103,6 +103,7 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                         file_affectedness = check_file(expected_file, *project_meta, analysis_result.instance_metrics)
                     except TextSectionDeletedError as e:
                         analysis_result.instance_metrics.deleted = True
+                        analysis_result.instance_metrics.time_alive = commit.timestamp - alert_commit_timestamp
                         printer.red("Instance deleted.", LogLevel.INFO)
                         printer.blue(str(e), LogLevel.INFO)
                 # endregion
@@ -114,6 +115,7 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                         sibling_affectedness = check_file(expected_sibling, *project_meta, analysis_result.sibling_instance_metrics)
                     except TextSectionDeletedError as e:
                         analysis_result.sibling_instance_metrics.deleted = True
+                        analysis_result.sibling_instance_metrics.time_alive = commit.timestamp - alert_commit_timestamp
                         printer.red("Sibling deleted.", LogLevel.INFO)
                         printer.blue(str(e), LogLevel.INFO)
                 # endregion        
@@ -151,6 +153,14 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                 analysis_start = step + 1
                 analysis_result.analysed_until = step
                 pass
+
+        # region calc time alive
+        time_until_today = analysis_result.most_recent_commit - alert_commit_timestamp
+        if not analysis_result.instance_metrics.deleted:
+            analysis_result.instance_metrics.time_alive = time_until_today
+        if not analysis_result.sibling_instance_metrics.deleted:
+            analysis_result.sibling_instance_metrics.time_alive = time_until_today
+        # endregion
         printer.white(SEPARATOR + "\n" + str(analysis_result), LogLevel.RELEVANT)
         results.append(analysis_result)
     return results
@@ -166,6 +176,9 @@ def check_file(file: str, client: TeamscaleClient, commit_timestamp: int, previo
             "{0:51}".format(file_name + " affected at commit:") + timestamp_to_str(commit_timestamp), level=LogLevel.VERBOSE
         )
 
+        old_start_line = instance_metrics.corrected_start_line
+        old_end_line = instance_metrics.corrected_end_line
+
         diff_dict, link = get_diff(client, file, previous_commit_timestamp, file, commit_timestamp)
         diff_dict: dict[DiffType, DiffDescription]
         link: str
@@ -178,7 +191,7 @@ def check_file(file: str, client: TeamscaleClient, commit_timestamp: int, previo
             raise type(e)(link)
 
         if are_left_lines_affected_at_diff(
-                instance_metrics.corrected_start_line, instance_metrics.corrected_end_line, diff_dict.get(DiffType.TOKEN_BASED)
+                old_start_line, old_end_line, diff_dict.get(DiffType.TOKEN_BASED)
         ):
             instance_metrics.affected_critical_count += 1
             printer.red(

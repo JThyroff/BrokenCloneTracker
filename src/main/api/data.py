@@ -73,6 +73,9 @@ class TextRegionLocation(object):
     def get_interval(self):
         return "[" + str(self.raw_start_line) + "-" + str(self.raw_end_line) + ")"
 
+    def get_file_name(self) -> str:
+        return self.uniform_path.split("/")[-1]
+
     @classmethod
     def from_json(cls, json):
         return TextRegionLocation(
@@ -126,10 +129,13 @@ class CommitAlert(object):
             return self.context == other.context and self.message == other.message
 
     def __str__(self):
-        return ("Commit Alert: " + self.message + "\nExpected clone location: " + self.context.expected_clone_location.uniform_path
-                + "\nInstance interval: " + self.context.expected_clone_location.get_interval() + "\nExpected sibling location: " +
-                self.context.expected_sibling_location.uniform_path + "\nSibling interval: "
-                + self.context.expected_sibling_location.get_interval())
+        return ("Commit Alert: " + self.message
+                + "\n" + self.context.expected_clone_location.get_file_name()
+                + " and " + self.context.expected_sibling_location.get_file_name()
+                + "\nExpected clone location: " + self.context.expected_clone_location.uniform_path
+                + "\nInstance interval: " + self.context.expected_clone_location.get_interval()
+                + "\nExpected sibling location: " + self.context.expected_sibling_location.uniform_path
+                + "\nSibling interval: " + self.context.expected_sibling_location.get_interval())
 
     def get_broken_clone_link(self, client: TeamscaleClient, commit_timestamp: int) -> str:
         # return link to broken clone
@@ -288,7 +294,7 @@ class CloneFinding:
     def get_finding_link(self, client: TeamscaleClient, commit_timestamp: int):
         return (
                 client.url + "/findings.html#details/" + client.project + "/?id=" + self.finding_id
-                + "&t=" + client.branch + "%3A" + str(commit_timestamp) + "p1"
+                + "&t=" + client.branch + "%3A" + str(commit_timestamp)
         )
 
     @classmethod
@@ -321,19 +327,19 @@ class CloneFindingChurn:
     def __str__(self):
         to_return = "Clone Finding Churn for commit: " + str(self.commit.timestamp) + "\n"
         if self.added_findings:
-            to_return += "added findings = "
+            to_return += "\nAdded findings = "
             to_return += ',\n'.join(map(str, self.added_findings))
         if self.findings_added_in_branch:
-            to_return += "findings added in branch = "
+            to_return += "\n\nFindings added in branch = "
             to_return += ', '.join(map(str, self.findings_added_in_branch))
         if self.findings_in_changed_code:
-            to_return += "findings in changed code = "
+            to_return += "\n\nFindings in changed code = "
             to_return += ',\n'.join(map(str, self.findings_in_changed_code))
         if self.removed_findings:
-            to_return += "removed findings = "
+            to_return += "\n\nRemoved findings = "
             to_return += ',\n'.join(map(str, self.removed_findings))
         if self.findings_removed_in_branch:
-            to_return += "findings removed in branch = "
+            to_return += "\n\nFindings removed in branch = "
             to_return += ',\n'.join(map(str, self.findings_removed_in_branch))
         if self.is_empty():
             to_return = to_return[:-1] + " NO  CHURN"
