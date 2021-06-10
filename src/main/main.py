@@ -10,8 +10,9 @@ from src.main.analysis.analysis import update_filtered_alert_commits, analyse_on
 from src.main.analysis.analysis_utils import AnalysisResult
 from src.main.api.data import Commit
 from src.main.persistence import parse_args, AlertFile, write_to_file, read_from_file
-from src.main.plotter import plot_violin_plot, plot_pie, plot_bar
+from src.main.plotter import plot_instance_metrics, plot_pie, plot_bar
 from src.main.pretty_print import MyPrinter, LogLevel
+from src.main.utils.time_utils import display_time
 
 printer: MyPrinter = MyPrinter(LogLevel.INFO)
 
@@ -44,9 +45,10 @@ def plot_results(project: str, successful_runs, failed_runs):
         , LogLevel.RELEVANT
     )
 
-    plot_violin_plot(project, successful_runs, failed_runs)
     plot_pie(project, successful_runs, failed_runs, successful_result_count)
     plot_bar(project, successful_runs, successful_result_count)
+    plot_instance_metrics(project, successful_runs, failed_runs, boxplot=True)
+    plot_instance_metrics(project, successful_runs, failed_runs)
 
     plt.show()
 
@@ -72,7 +74,7 @@ def run_analysis(client: TeamscaleClient):
             traceback.print_exc()
             printer.red("ERROR")
             failed_runs.append(alert_commit.timestamp)
-    printer.blue("Analysis took: " + str(time.process_time() - start) + " seconds.", LogLevel.INFO)
+    printer.blue("Analysis took: " + display_time(time.process_time() - start) + " seconds.", LogLevel.INFO)
     printer.blue("Alert commit count: " + str(len(alert_file.alert_commit_list)), LogLevel.INFO)
     printer.blue("Successful analysis count: " + str(successful_analysis_count))
 
@@ -92,10 +94,10 @@ def main(client: TeamscaleClient) -> None:
         failed_runs = result_dict.get("failed runs")
         plot_results(client.project, successful_runs, failed_runs)
 
-    run_analysis(client)
-    return
-    analyse_one_alert_commit(client, 1356517490000)
     read_and_plot()
+    return
+    run_analysis(client)
+    analyse_one_alert_commit(client, 1356517490000)
 
 
 if __name__ == "__main__":

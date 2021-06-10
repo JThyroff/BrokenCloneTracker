@@ -6,6 +6,7 @@ from matplotlib import pyplot as plt
 
 from defintions import get_window_title
 from src.main.analysis.analysis_utils import AnalysisResult
+from src.main.utils.time_utils import display_time
 
 
 def plot_pie(project: str, successful_runs, failed_runs, successful_result_count):
@@ -72,7 +73,7 @@ def plot_pie(project: str, successful_runs, failed_runs, successful_result_count
     fig1.tight_layout()
 
 
-def plot_violin_plot(project, successful_runs, failed_runs):
+def plot_instance_metrics(project, successful_runs, failed_runs, boxplot=False):
     fig, axs = plt.subplots(figsize=(10, 6))
 
     one_file_affected_count_list = []
@@ -104,7 +105,10 @@ def plot_violin_plot(project, successful_runs, failed_runs):
     ]
 
     # plot violin plot
-    axs.violinplot(all_data, showmeans=False, showmedians=True, vert=False)
+    if boxplot:
+        axs.boxplot(all_data, showmeans=False, vert=False)
+    else:
+        axs.violinplot(all_data, showmeans=False, showmedians=True, vert=False)
     axs.set_title('Instance Metrics')
 
     # adding vertical grid lines
@@ -112,7 +116,7 @@ def plot_violin_plot(project, successful_runs, failed_runs):
     total = []
     for i in all_data:
         total += i
-    axs.set_xticks([x for x in range(max(total) + 1)])
+    axs.set_xticks([x for x in range(0, max(total) + 1, 5)])
     # add y-tick labels
     plt.setp(
         axs, yticks=[y + 1 for y in range(len(all_data))]
@@ -131,9 +135,13 @@ def plot_bar(project, successful_runs, successful_result_count):
     sibling_deleted_count = 0
     one_instance_deleted_count = 0
     both_instances_deleted_count = 0
+    avg_time_alive = 0
     for run in successful_runs:
         alert_commit_timestamp, results = run
         for r in results:
+            r: AnalysisResult
+            avg_time_alive += r.instance_metrics.time_alive / (2 * successful_result_count)
+            avg_time_alive += r.sibling_instance_metrics.time_alive / (2 * successful_result_count)
             if r.instance_metrics.deleted:
                 instance_deleted_count += 1
             if r.sibling_instance_metrics.deleted:
@@ -163,7 +171,7 @@ def plot_bar(project, successful_runs, successful_result_count):
     ax.set_yticklabels(labels)
     ax.invert_yaxis()
     ax.legend()
-
+    ax.set_title('Average Time Alive: ' + display_time(int(avg_time_alive)))
     #    ax.bar_label(rects1, padding=3)
     #   ax.bar_label(rects2, padding=3)
     fig.canvas.set_window_title(get_window_title(project))
