@@ -104,7 +104,7 @@ def is_file_affected_at_file_changes(file_uniform_path: str, affected_files: [Fi
 
 
 def filter_file_changes(file_uniform_path: str, affected_files: [FileChange]) -> [FileChange]:
-    return list(filter(lambda f: f.uniform_path == file_uniform_path, affected_files))
+    return list(filter(lambda f: f.uniform_path == file_uniform_path or f.origin_path == file_uniform_path, affected_files))
 
 
 def are_left_lines_affected_at_diff(raw_start_line: int, raw_end_line: int, diff_desc: DiffDescription) -> bool:
@@ -164,7 +164,7 @@ def deletion_pre_check(relevant_interval: Interval, diff_desc: DiffDescription):
             deleted_lines += get_interval_length(left_interval.intersection(relevant_interval))
     if relevant_interval_length - deleted_lines < deletion_pre_check_factor * relevant_interval_length:
         raise TextSectionDeletedError(
-            "more than " + deletion_pre_check_factor_inverse_string + "% of the relevant clone section is deleted for sure."
+            "more than " + deletion_pre_check_factor_inverse_string + "% of the relevant clone section is deleted."
         )
 
     # filter the intervals that overlap more than 80% with the relevant interval
@@ -186,7 +186,7 @@ def deletion_pre_check(relevant_interval: Interval, diff_desc: DiffDescription):
     if relevant_interval_length + line_diff_count < deletion_pre_check_factor * relevant_interval_length:
         # more than (1 - deletion_pre_check_factor) * 100% of the relevant clone section is deleted for sure
         raise TextSectionDeletedError(
-            "more than " + deletion_pre_check_factor_inverse_string + "% of the relevant clone section is deleted for sure."
+            "more than " + deletion_pre_check_factor_inverse_string + "% of the relevant clone section is deleted."
         )
 
 

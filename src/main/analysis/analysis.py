@@ -100,7 +100,7 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                 instance_affectedness: Affectedness = Affectedness.NOT_AFFECTED
                 if not analysis_result.instance_metrics.deleted:
                     try:
-                        instance_affectedness = check_file(expected_file, *project_meta, analysis_result.instance_metrics)
+                        instance_affectedness, expected_file = check_file(expected_file, *project_meta, analysis_result.instance_metrics)
                     except (TextSectionDeletedError, FileDeletedError) as e:
                         analysis_result.instance_metrics.deleted = True
                         analysis_result.instance_metrics.time_alive = commit.timestamp - alert_commit_timestamp
@@ -112,7 +112,7 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                 sibling_instance_affectedness: Affectedness = Affectedness.NOT_AFFECTED
                 if not analysis_result.sibling_instance_metrics.deleted:
                     try:
-                        sibling_instance_affectedness = check_file(
+                        sibling_instance_affectedness, expected_sibling = check_file(
                             expected_sibling, *project_meta, analysis_result.sibling_instance_metrics
                         )
                     except (TextSectionDeletedError, FileDeletedError) as e:
@@ -147,30 +147,36 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
     return results
 
 
-def check_file(file_path: str, client: TeamscaleClient, commit_timestamp: int, previous_commit_timestamp: int,
-               affected_files: [FileChange], instance_metrics: InstanceMetrics) -> Affectedness:
+def check_file(file_path: str, client: TeamscaleClient, commit_timestamp: int, previous_commit_timestamp: int, affected_files: [FileChange]
+               , instance_metrics: InstanceMetrics) -> (Affectedness, str):
     """Check for given file whether it is affected at a specific commit timestamp. If it is modified the diff will be analysed and looked up
     whether the relevant text passage is modified in this commit."""
     changes: [FileChange] = filter_file_changes(file_path, affected_files)
-    assert len(changes) <= 1
     if len(changes) != 0:
-        file_name = file_path.split('/')[-1]
+        change: FileChange = changes[0]
+        for c in changes:
+            c: FileChange
+            if c.change_type is not ChangeType.DELETE:
+                # take that?
+                change = c
+
+        file_name = change.uniform_path.split('/')[-1]
         printer.white(
             "{0:51}".format(file_name + " affected at commit:") + timestamp_to_str(commit_timestamp), level=LogLevel.VERBOSE
         )
 
-        change: FileChange = changes[0]
-        origin_file_path = file_path
+        origin_path = file_path
         if change.change_type == ChangeType.DELETE:
             raise FileDeletedError("The file was deleted.")
         elif change.origin_path is not None:
-            origin_file_path = change.origin_path
+            origin_path = change.origin_path
+            file_path = change.uniform_path
             printer.yellow("The file was moved from " + change.origin_path + " to " + change.uniform_path, LogLevel.INFO)
 
         old_start_line = instance_metrics.corrected_start_line
         old_end_line = instance_metrics.corrected_end_line
 
-        diff_dict, link = get_diff(client, origin_file_path, previous_commit_timestamp, file_path, commit_timestamp)
+        diff_dict, link = get_diff(client, origin_path, previous_commit_timestamp, file_path, commit_timestamp)
         diff_dict: dict[DiffType, DiffDescription]
         link: str
 
@@ -192,7 +198,7 @@ def check_file(file_path: str, client: TeamscaleClient, commit_timestamp: int, p
                 , LogLevel.INFO
             )
             printer.blue(link, LogLevel.INFO)
-            return Affectedness.AFFECTED_CRITICAL
+            return Affectedness.AFFECTED_CRITICAL, file_path
         else:
             instance_metrics.file_affected_count += 1
             printer.white(
@@ -200,9 +206,9 @@ def check_file(file_path: str, client: TeamscaleClient, commit_timestamp: int, p
                 + " interval [" + str(instance_metrics.corrected_start_line) + "-" + str(instance_metrics.corrected_end_line) + ")"
                 , LogLevel.DEBUG)
             printer.blue(link, LogLevel.DEBUG)
-            return Affectedness.AFFECTED_BY_COMMIT
+            return Affectedness.AFFECTED_BY_COMMIT, file_path
     else:
-        return Affectedness.NOT_AFFECTED
+        return Affectedness.NOT_AFFECTED, file_path
 
 
 def interpret_affectedness(analysis_result, instance_affectedness, sibling_instance_affectedness):
