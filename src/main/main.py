@@ -8,6 +8,7 @@ from teamscale_client import TeamscaleClient
 from defintions import get_result_file_name
 from src.main.analysis.analysis import update_filtered_alert_commits, analyse_one_alert_commit
 from src.main.analysis.analysis_utils import AnalysisResult
+from src.main.api.api import get_affected_files
 from src.main.api.data import Commit
 from src.main.persistence import parse_args, AlertFile, write_to_file, read_from_file
 from src.main.plotter import plot_instance_metrics, plot_pie, plot_bar
@@ -74,7 +75,7 @@ def run_analysis(client: TeamscaleClient):
             traceback.print_exc()
             printer.red("ERROR")
             failed_runs.append(alert_commit.timestamp)
-    printer.blue("Analysis took: " + display_time(time.process_time() - start) + " seconds.", LogLevel.INFO)
+    printer.blue("Analysis took: " + display_time(int((time.process_time() - start) * 1000)), LogLevel.INFO)
     printer.blue("Alert commit count: " + str(len(alert_file.alert_commit_list)), LogLevel.INFO)
     printer.blue("Successful analysis count: " + str(successful_analysis_count))
 
@@ -94,10 +95,11 @@ def main(client: TeamscaleClient) -> None:
         failed_runs = result_dict.get("failed runs")
         plot_results(client.project, successful_runs, failed_runs)
 
-    read_and_plot()
-    return
     run_analysis(client)
-    analyse_one_alert_commit(client, 1356517490000)
+    return
+    read_and_plot()
+    analyse_one_alert_commit(client, 1321550680000)
+    get_affected_files(client, 1612210799000)
 
 
 if __name__ == "__main__":

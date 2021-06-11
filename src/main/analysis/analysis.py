@@ -7,12 +7,13 @@ from src.main.analysis.analysis_utils import (
     AnalysisResult, TextSectionDeletedError, InstanceMetrics, filter_file_changes, FileDeletedError
 )
 from src.main.api.api import (
-    get_repository_summary, get_repository_commits, get_commit_alerts, get_affected_files, get_diff, get_clone_finding_churn
+    get_repository_summary, get_repository_commits, get_commit_alerts, get_affected_files, get_diff, get_clone_finding_churn,
+    get_delta_affected_files
 )
 from src.main.api.data import CommitAlert, Commit, FileChange, DiffType, DiffDescription, CloneFindingChurn, ChangeType
 from src.main.persistence import AlertFile, read_alert_file, write_to_file
 from src.main.pretty_print import MyPrinter, LogLevel, SEPARATOR
-from src.main.utils.time_utils import timestamp_to_str
+from src.main.utils.time_utils import timestamp_to_str, display_time
 
 printer: MyPrinter = MyPrinter(LogLevel.DEBUG)
 
@@ -73,9 +74,8 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
         # endregion
         # start analysis
         analysis_start: int = alert_commit_timestamp + 1
-        analysis_step: int = 15555555_000  # milliseconds. 6 months
+        analysis_step: int = 7890000_000  # milliseconds. 3 months # 15555555_000 ~ 6 months
 
-        commit_list: [Commit] = []
         while analysis_start < repository_summary[1]:
             step = analysis_start + analysis_step
             if step > repository_summary[1]:
@@ -86,55 +86,61 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                 break
             # get repository data in chunks - this was to be able to write temporary results to a file
             # this is maybe unnecessary yet
-            new_commits = get_repository_commits(client, analysis_start, step)
             expected_file = commit_alert.context.expected_clone_location.uniform_path
             expected_sibling = commit_alert.context.expected_sibling_location.uniform_path
             previous_commit_timestamp = alert_commit_timestamp
 
-            for commit in new_commits:
-                # goal: retrieve affectedness of the relevant text passages for each commit
-                affected_files: [FileChange] = get_affected_files(client, commit.timestamp)
-                project_meta = (client, commit.timestamp, previous_commit_timestamp, affected_files)
+            if (not (get_delta_affected_files(client, analysis_start, step, expected_file) is None
+                     and get_delta_affected_files(client, analysis_start, step, expected_sibling) is None)):
+                # if no changes are in this interval
+                new_commits = get_repository_commits(client, analysis_start, step)
+                for commit in new_commits:
+                    # goal: retrieve affectedness of the relevant text passages for each commit
+                    affected_files: [FileChange] = get_affected_files(client, commit.timestamp)
+                    project_meta = (client, commit.timestamp, previous_commit_timestamp, affected_files)
 
-                # region check file
-                instance_affectedness: Affectedness = Affectedness.NOT_AFFECTED
-                if not analysis_result.instance_metrics.deleted:
-                    try:
-                        instance_affectedness, expected_file = check_file(expected_file, *project_meta, analysis_result.instance_metrics)
-                    except (TextSectionDeletedError, FileDeletedError) as e:
-                        analysis_result.instance_metrics.deleted = True
-                        analysis_result.instance_metrics.time_alive = commit.timestamp - alert_commit_timestamp
-                        printer.red("Instance deleted.", LogLevel.INFO)
-                        printer.blue(str(e), LogLevel.INFO)
-                # endregion
+                    # region check file
+                    instance_affectedness: Affectedness = Affectedness.NOT_AFFECTED
+                    if not analysis_result.instance_metrics.deleted:
+                        try:
+                            instance_affectedness, expected_file = check_file(expected_file, *project_meta,
+                                                                              analysis_result.instance_metrics)
+                        except (TextSectionDeletedError, FileDeletedError) as e:
+                            analysis_result.instance_metrics.deleted = True
+                            analysis_result.instance_metrics.time_alive = commit.timestamp - alert_commit_timestamp
+                            printer.red("Instance deleted.", LogLevel.INFO)
+                            printer.blue(str(e), LogLevel.INFO)
+                    # endregion
 
-                # region check sibling
-                sibling_instance_affectedness: Affectedness = Affectedness.NOT_AFFECTED
-                if not analysis_result.sibling_instance_metrics.deleted:
-                    try:
-                        sibling_instance_affectedness, expected_sibling = check_file(
-                            expected_sibling, *project_meta, analysis_result.sibling_instance_metrics
-                        )
-                    except (TextSectionDeletedError, FileDeletedError) as e:
-                        analysis_result.sibling_instance_metrics.deleted = True
-                        analysis_result.sibling_instance_metrics.time_alive = commit.timestamp - alert_commit_timestamp
-                        printer.red("Sibling deleted.", LogLevel.INFO)
-                        printer.blue(str(e), LogLevel.INFO)
-                # endregion        
+                    # region check sibling
+                    sibling_instance_affectedness: Affectedness = Affectedness.NOT_AFFECTED
+                    if not analysis_result.sibling_instance_metrics.deleted:
+                        try:
+                            sibling_instance_affectedness, expected_sibling = check_file(
+                                expected_sibling, *project_meta, analysis_result.sibling_instance_metrics
+                            )
+                        except (TextSectionDeletedError, FileDeletedError) as e:
+                            analysis_result.sibling_instance_metrics.deleted = True
+                            analysis_result.sibling_instance_metrics.time_alive = commit.timestamp - alert_commit_timestamp
+                            printer.red("Sibling deleted.", LogLevel.INFO)
+                            printer.blue(str(e), LogLevel.INFO)
+                    # endregion
 
-                # get clone finding churn for commit: filter for clones where both files are affected
-                inspect_clone_finding_churn(analysis_result, client, commit, expected_file, expected_sibling)
+                    # get clone finding churn for commit: filter for clones where both files are affected
+                    inspect_clone_finding_churn(analysis_result, client, commit, expected_file, expected_sibling)
 
-                # interpret affectedness
-                interpret_affectedness(analysis_result, instance_affectedness, sibling_instance_affectedness)
+                    # interpret affectedness
+                    interpret_affectedness(analysis_result, instance_affectedness, sibling_instance_affectedness)
 
-                previous_commit_timestamp = commit.timestamp
-                commit_list.extend(new_commits)
-
-                analysis_start = step + 1
-                analysis_result.analysed_until = step
-                pass
-
+                    previous_commit_timestamp = commit.timestamp
+                # end for
+            # end if
+            else:
+                printer.red("S K I P  :  " + display_time(analysis_step) + " : No File affected in this Interval.")
+            analysis_start = step + 1
+            analysis_result.analysed_until = step
+            pass
+        # end while
         # region calc time alive
         time_until_today = analysis_result.most_recent_commit - alert_commit_timestamp
         if not analysis_result.instance_metrics.deleted:

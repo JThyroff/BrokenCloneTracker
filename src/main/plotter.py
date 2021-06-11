@@ -1,3 +1,4 @@
+import math
 from functools import reduce
 
 import matplotlib.colors as m_colors
@@ -55,7 +56,7 @@ def plot_pie(project: str, successful_runs, failed_runs, successful_result_count
     ]
     idx = sizes.index(max(sizes))
     # all weights sum up to 1.0
-    assert reduce(lambda a, b: a + b, sizes) == 1.0
+    assert math.isclose(reduce(lambda a, b: a + b, sizes), 1.0, abs_tol=0.01)
 
     tab_colors = m_colors.TABLEAU_COLORS
     color_set = (

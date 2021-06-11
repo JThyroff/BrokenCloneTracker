@@ -423,3 +423,13 @@ class CloneFindingChurn:
                 findings_removed_in_branch.append(CloneFinding.from_json(finding))
         return CloneFindingChurn(Commit.from_json(json["commit"]), added_findings, findings_added_in_branch,
                                  findings_in_changed_code, removed_findings, findings_removed_in_branch)
+
+
+@dataclass
+class TokenElementChurnInfo:
+    uniform_path: str
+    change_type: ChangeType
+
+    @classmethod
+    def from_json(cls, json):
+        return TokenElementChurnInfo(json['uniformPath'], ChangeType.from_json(json['changeType']))

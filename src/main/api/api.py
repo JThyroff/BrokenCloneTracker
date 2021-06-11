@@ -5,7 +5,7 @@ from teamscale_client import TeamscaleClient
 
 from defintions import JAVA_INT_MAX
 from src.main.api.api_utils import get_project_api_service_url, get_global_service_url
-from src.main.api.data import Commit, CommitAlert, FileChange, DiffDescription, DiffType, CloneFindingChurn
+from src.main.api.data import Commit, CommitAlert, FileChange, DiffDescription, DiffType, CloneFindingChurn, TokenElementChurnInfo
 from src.main.pretty_print import MyPrinter, LogLevel
 from src.main.utils.time_utils import timestamp_to_str
 
@@ -163,3 +163,23 @@ def get_clone_finding_churn(client: TeamscaleClient, commit_timestamp: int) -> C
     clone_finding_churn: CloneFindingChurn = CloneFindingChurn.from_json(parsed)
 
     return clone_finding_churn
+
+
+def get_delta_affected_files(client: TeamscaleClient, t1: int, t2: int, uniform_path: str, max_millis=-1):
+    url = get_project_api_service_url(client, "delta/affected-files")
+    parameters = {
+        "t1": t1,
+        "t2": t2,
+        "uniform-path": uniform_path,
+        "max-milliseconds": max_millis
+    }
+    response: requests.Response = client.get(url, parameters)
+    parsed = json.loads(response.text)
+
+    if len(parsed) > 1:
+        raise NotImplementedError("Not Implemented. Multiple files.")
+    elif len(parsed) == 1:
+        parsed = parsed[0]
+        return TokenElementChurnInfo.from_json(parsed)
+    else:
+        return None
