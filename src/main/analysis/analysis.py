@@ -3,13 +3,13 @@ import traceback
 from teamscale_client import TeamscaleClient
 
 from src.main.analysis.analysis_utils import (
-    is_file_affected_at_file_changes, are_left_lines_affected_at_diff, correct_lines, filter_clone_finding_churn_by_file, Affectedness,
-    AnalysisResult, TextSectionDeletedError, InstanceMetrics
+    are_left_lines_affected_at_diff, correct_lines, filter_clone_finding_churn_by_file, Affectedness,
+    AnalysisResult, TextSectionDeletedError, InstanceMetrics, filter_file_changes, FileDeletedError
 )
 from src.main.api.api import (
     get_repository_summary, get_repository_commits, get_commit_alerts, get_affected_files, get_diff, get_clone_finding_churn
 )
-from src.main.api.data import CommitAlert, Commit, FileChange, DiffType, DiffDescription, CloneFindingChurn
+from src.main.api.data import CommitAlert, Commit, FileChange, DiffType, DiffDescription, CloneFindingChurn, ChangeType
 from src.main.persistence import AlertFile, read_alert_file, write_to_file
 from src.main.pretty_print import MyPrinter, LogLevel, SEPARATOR
 from src.main.utils.time_utils import timestamp_to_str
@@ -97,11 +97,11 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                 project_meta = (client, commit.timestamp, previous_commit_timestamp, affected_files)
 
                 # region check file
-                file_affectedness: Affectedness = Affectedness.NOT_AFFECTED
+                instance_affectedness: Affectedness = Affectedness.NOT_AFFECTED
                 if not analysis_result.instance_metrics.deleted:
                     try:
-                        file_affectedness = check_file(expected_file, *project_meta, analysis_result.instance_metrics)
-                    except TextSectionDeletedError as e:
+                        instance_affectedness = check_file(expected_file, *project_meta, analysis_result.instance_metrics)
+                    except (TextSectionDeletedError, FileDeletedError) as e:
                         analysis_result.instance_metrics.deleted = True
                         analysis_result.instance_metrics.time_alive = commit.timestamp - alert_commit_timestamp
                         printer.red("Instance deleted.", LogLevel.INFO)
@@ -109,43 +109,24 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                 # endregion
 
                 # region check sibling
-                sibling_affectedness: Affectedness = Affectedness.NOT_AFFECTED
+                sibling_instance_affectedness: Affectedness = Affectedness.NOT_AFFECTED
                 if not analysis_result.sibling_instance_metrics.deleted:
                     try:
-                        sibling_affectedness = check_file(expected_sibling, *project_meta, analysis_result.sibling_instance_metrics)
-                    except TextSectionDeletedError as e:
+                        sibling_instance_affectedness = check_file(
+                            expected_sibling, *project_meta, analysis_result.sibling_instance_metrics
+                        )
+                    except (TextSectionDeletedError, FileDeletedError) as e:
                         analysis_result.sibling_instance_metrics.deleted = True
                         analysis_result.sibling_instance_metrics.time_alive = commit.timestamp - alert_commit_timestamp
                         printer.red("Sibling deleted.", LogLevel.INFO)
                         printer.blue(str(e), LogLevel.INFO)
                 # endregion        
 
-                # region get clone finding churn for commit: filter for clones where both files are affected
-                clone_finding_churn: CloneFindingChurn = get_clone_finding_churn(client, commit.timestamp)
-                clone_finding_churn = filter_clone_finding_churn_by_file([expected_file, expected_sibling], clone_finding_churn)
-                if not clone_finding_churn.is_empty():
-                    printer.yellow(str(clone_finding_churn), level=LogLevel.INFO)
-                    for s in clone_finding_churn.get_finding_links(client, commit.timestamp):
-                        printer.blue(s, level=LogLevel.INFO)
-                    if clone_finding_churn.is_relevant():
-                        analysis_result.clone_findings_count += 1
-                # endregion
+                # get clone finding churn for commit: filter for clones where both files are affected
+                inspect_clone_finding_churn(analysis_result, client, commit, expected_file, expected_sibling)
 
-                # region interpret affectedness
-                affectedness_product: int = file_affectedness * sibling_affectedness
-                if affectedness_product == 9:
-                    analysis_result.both_instances_affected_critical_count += 1
-                    printer.red("-> Both affected critical", LogLevel.INFO)
-                elif affectedness_product == 3 or affectedness_product == 6:
-                    analysis_result.one_instance_affected_critical_count += 1
-                    printer.red("-> One affected critical", LogLevel.INFO)
-                elif affectedness_product == 4:
-                    analysis_result.both_files_affected_count += 1
-                    printer.white("-> Both affected", LogLevel.VERBOSE)
-                elif affectedness_product == 2:
-                    analysis_result.one_file_affected_count += 1
-                    printer.white("-> One affected", LogLevel.VERBOSE)
-                # endregion
+                # interpret affectedness
+                interpret_affectedness(analysis_result, instance_affectedness, sibling_instance_affectedness)
 
                 previous_commit_timestamp = commit.timestamp
                 commit_list.extend(new_commits)
@@ -166,29 +147,40 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
     return results
 
 
-def check_file(file: str, client: TeamscaleClient, commit_timestamp: int, previous_commit_timestamp: int,
+def check_file(file_path: str, client: TeamscaleClient, commit_timestamp: int, previous_commit_timestamp: int,
                affected_files: [FileChange], instance_metrics: InstanceMetrics) -> Affectedness:
     """Check for given file whether it is affected at a specific commit timestamp. If it is modified the diff will be analysed and looked up
     whether the relevant text passage is modified in this commit."""
-    if is_file_affected_at_file_changes(file, affected_files):
-        file_name = file.split('/')[-1]
+    changes: [FileChange] = filter_file_changes(file_path, affected_files)
+    assert len(changes) <= 1
+    if len(changes) != 0:
+        file_name = file_path.split('/')[-1]
         printer.white(
             "{0:51}".format(file_name + " affected at commit:") + timestamp_to_str(commit_timestamp), level=LogLevel.VERBOSE
         )
 
+        change: FileChange = changes[0]
+        origin_file_path = file_path
+        if change.change_type == ChangeType.DELETE:
+            raise FileDeletedError("The file was deleted.")
+        elif change.origin_path is not None:
+            origin_file_path = change.origin_path
+            printer.yellow("The file was moved from " + change.origin_path + " to " + change.uniform_path, LogLevel.INFO)
+
         old_start_line = instance_metrics.corrected_start_line
         old_end_line = instance_metrics.corrected_end_line
 
-        diff_dict, link = get_diff(client, file, previous_commit_timestamp, file, commit_timestamp)
+        diff_dict, link = get_diff(client, origin_file_path, previous_commit_timestamp, file_path, commit_timestamp)
         diff_dict: dict[DiffType, DiffDescription]
         link: str
+
         try:
             instance_metrics.corrected_start_line, instance_metrics.corrected_end_line = correct_lines(
                 instance_metrics.corrected_start_line, instance_metrics.corrected_end_line, diff_dict.get(DiffType.LINE_BASED)
             )
         except Exception as e:
             traceback.print_exc()
-            raise type(e)(link)
+            raise type(e)("link: " + link)
 
         if are_left_lines_affected_at_diff(
                 old_start_line, old_end_line, diff_dict.get(DiffType.TOKEN_BASED)
@@ -211,3 +203,33 @@ def check_file(file: str, client: TeamscaleClient, commit_timestamp: int, previo
             return Affectedness.AFFECTED_BY_COMMIT
     else:
         return Affectedness.NOT_AFFECTED
+
+
+def interpret_affectedness(analysis_result, instance_affectedness, sibling_instance_affectedness):
+    """interprets the affectedness of the two instances, logs and increases the counters."""
+    affectedness_product: int = instance_affectedness * sibling_instance_affectedness
+    if affectedness_product == 9:
+        analysis_result.both_instances_affected_critical_count += 1
+        printer.red("-> Both affected critical", LogLevel.INFO)
+    elif affectedness_product == 3 or affectedness_product == 6:
+        analysis_result.one_instance_affected_critical_count += 1
+        printer.red("-> One affected critical", LogLevel.INFO)
+    elif affectedness_product == 4:
+        analysis_result.both_files_affected_count += 1
+        printer.white("-> Both affected", LogLevel.VERBOSE)
+    elif affectedness_product == 2:
+        analysis_result.one_file_affected_count += 1
+        printer.white("-> One affected", LogLevel.VERBOSE)
+
+
+def inspect_clone_finding_churn(analysis_result, client, commit, expected_file, expected_sibling):
+    """Get clone finding churn and filter it for clones where both files are affected. If there is a new clone added in this churn the
+    clone_findings_count will be increased by one."""
+    clone_finding_churn: CloneFindingChurn = get_clone_finding_churn(client, commit.timestamp)
+    clone_finding_churn = filter_clone_finding_churn_by_file([expected_file, expected_sibling], clone_finding_churn)
+    if not clone_finding_churn.is_empty():
+        printer.yellow(str(clone_finding_churn), level=LogLevel.INFO)
+        for s in clone_finding_churn.get_finding_links(client, commit.timestamp):
+            printer.blue(s, level=LogLevel.INFO)
+        if clone_finding_churn.is_relevant():
+            analysis_result.clone_findings_count += 1

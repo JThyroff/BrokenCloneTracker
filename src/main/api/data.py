@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import Enum
 
 from teamscale_client import TeamscaleClient
@@ -162,25 +163,41 @@ class CommitAlert(object):
         return CommitAlert(CommitAlertContext.from_json(json['context']), json['message'])
 
 
-@auto_str
-class FileChange(object):
-    def __init__(self, uniform_path: str, change_type: str, commit: Commit):
-        self.uniform_path = uniform_path
-        self.change_type = change_type
-        self.commit = commit
-
-    def __eq__(self, other):
-        if not isinstance(other, FileChange):
-            return NotImplemented
-        elif self is other:
-            return True
-        else:
-            return self.uniform_path == other.uniform_path and self.change_type == other.change_type \
-                   and self.commit == other.commit
+class ChangeType(Enum):
+    ADD = "ADD",
+    COPY = "COPY",
+    DELETE = "DELETE",
+    EDIT = "EDIT",
+    EXTERNAL_ANALYSIS_UPLOAD = "EXTERNAL_ANALYSIS_UPLOAD"
+    MOVE = "MOVE",
+    ORIGIN_CHANGE = "ORIGIN_CHANGE"
 
     @classmethod
     def from_json(cls, json):
-        return FileChange(json['uniformPath'], json['changeType'], Commit.from_json(json['commit']))
+        ct = ChangeType[json]
+        return ct
+
+
+@dataclass
+class FileChange(object):
+    change_type: ChangeType
+    uniform_path: str
+    commit: Commit
+    origin_path: str
+    origin_commit: Commit
+
+    @classmethod
+    def from_json(cls, json):
+        origin_path = None
+        origin_commit = None
+        try:
+            origin_path = json['originPath']
+            origin_commit = Commit.from_json(json['originCommit'])
+        except KeyError:
+            pass
+        return FileChange(
+            ChangeType.from_json(json['changeType']), json['uniformPath'], Commit.from_json(json['commit']), origin_path, origin_commit
+        )
 
 
 class DiffType(Enum):

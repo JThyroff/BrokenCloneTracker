@@ -89,7 +89,8 @@ def get_affected_files(client: TeamscaleClient, commit_timestamp: int) -> [FileC
     printer.separator(level=LogLevel.DEBUG)
     printer.yellow(
         "Getting affected files for timestamp " + str(commit_timestamp) + " at URL: " + str(url),
-        level=LogLevel.DEBUG)
+        level=LogLevel.DEBUG
+    )
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)

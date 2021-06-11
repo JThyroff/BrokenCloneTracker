@@ -11,6 +11,10 @@ from src.main.utils.interval_utils import get_interval_length, overlaps_more_tha
 from src.main.utils.time_utils import display_time, timestamp_to_str
 
 
+class FileDeletedError(Exception):
+    pass
+
+
 class TextSectionDeletedError(Exception):
     pass
 
@@ -97,6 +101,10 @@ class AnalysisResult:
 
 def is_file_affected_at_file_changes(file_uniform_path: str, affected_files: [FileChange]) -> bool:
     return file_uniform_path in [e.uniform_path for e in affected_files]
+
+
+def filter_file_changes(file_uniform_path: str, affected_files: [FileChange]) -> [FileChange]:
+    return list(filter(lambda f: f.uniform_path == file_uniform_path, affected_files))
 
 
 def are_left_lines_affected_at_diff(raw_start_line: int, raw_end_line: int, diff_desc: DiffDescription) -> bool:
