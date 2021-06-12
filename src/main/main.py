@@ -59,7 +59,7 @@ def run_analysis(client: TeamscaleClient):
     alert_file: AlertFile = update_filtered_alert_commits(client, overwrite=False)
     printer.separator(LogLevel.INFO)
     printer.blue("Alert commit count: " + str(len(alert_file.alert_commit_list)), LogLevel.INFO)
-    start = time.process_time()
+    start = int(time.time())
 
     successful_analysis_count = 0
     successful_runs = []
@@ -75,7 +75,7 @@ def run_analysis(client: TeamscaleClient):
             traceback.print_exc()
             printer.red("ERROR")
             failed_runs.append(alert_commit.timestamp)
-    printer.blue("Analysis took: " + display_time(int((time.process_time() - start) * 1000)), LogLevel.INFO)
+    printer.blue("Analysis took: " + display_time(int((time.time() - start) * 1000)), LogLevel.INFO)
     printer.blue("Alert commit count: " + str(len(alert_file.alert_commit_list)), LogLevel.INFO)
     printer.blue("Successful analysis count: " + str(successful_analysis_count))
 
@@ -95,10 +95,11 @@ def main(client: TeamscaleClient) -> None:
         failed_runs = result_dict.get("failed runs")
         plot_results(client.project, successful_runs, failed_runs)
 
-    run_analysis(client)
+    update_filtered_alert_commits(client, overwrite=True)
     return
     read_and_plot()
-    analyse_one_alert_commit(client, 1321550680000)
+    analyse_one_alert_commit(client, 1485528948779)
+    run_analysis(client)
     get_affected_files(client, 1612210799000)
 
 

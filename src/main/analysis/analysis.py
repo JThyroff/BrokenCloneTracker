@@ -2,6 +2,7 @@ import traceback
 
 from teamscale_client import TeamscaleClient
 
+from defintions import get_alert_timestamp_list_file_name
 from src.main.analysis.analysis_utils import (
     are_left_lines_affected_at_diff, correct_lines, filter_clone_finding_churn_by_file, Affectedness,
     AnalysisResult, TextSectionDeletedError, InstanceMetrics, filter_file_changes, FileDeletedError
@@ -37,6 +38,12 @@ def update_filtered_alert_commits(client: TeamscaleClient, overwrite=False) -> A
         alert_file.analysed_until = step
         write_to_file(file_name, alert_file)
         analysis_start = step + 1
+
+    d = dict()
+    x = list((alert.timestamp for alert in alert_file.alert_commit_list))
+    for i in x:
+        d.update({i: ""})
+    write_to_file(get_alert_timestamp_list_file_name(client.project), d)
 
     return alert_file
 

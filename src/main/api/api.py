@@ -9,7 +9,7 @@ from src.main.api.data import Commit, CommitAlert, FileChange, DiffDescription, 
 from src.main.pretty_print import MyPrinter, LogLevel
 from src.main.utils.time_utils import timestamp_to_str
 
-printer: MyPrinter = MyPrinter(LogLevel.VERBOSE)
+printer: MyPrinter = MyPrinter(LogLevel.DUMP)
 
 
 def get_repository_commits(client: TeamscaleClient, start_commit_timestamp: int, end_commit_timestamp,
