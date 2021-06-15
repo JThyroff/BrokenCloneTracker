@@ -1,5 +1,11 @@
 from datetime import datetime
 
+from teamscale_client import TeamscaleClient
+
+
+def add_branch(client: TeamscaleClient, commit_timestamp) -> str:
+    return client.branch + ":" + str(commit_timestamp)
+
 
 def timestamp_to_str(commit_timestamp) -> str:
     """get a printable string from a milliseconds commit timestamp"""

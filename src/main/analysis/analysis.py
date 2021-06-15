@@ -5,13 +5,13 @@ from teamscale_client import TeamscaleClient
 from defintions import get_alert_timestamp_list_file_name
 from src.main.analysis.analysis_utils import (
     are_left_lines_affected_at_diff, correct_lines, filter_clone_finding_churn_by_file, Affectedness,
-    AnalysisResult, TextSectionDeletedError, InstanceMetrics, filter_file_changes, FileDeletedError
+    AnalysisResult, TextSectionDeletedError, InstanceMetrics, filter_file_changes, FileDeletedError, filter_relevant_clone_findings
 )
 from src.main.api.api import (
     get_repository_summary, get_repository_commits, get_commit_alerts, get_affected_files, get_diff, get_clone_finding_churn,
     get_delta_affected_files
 )
-from src.main.api.data import CommitAlert, Commit, FileChange, DiffType, DiffDescription, CloneFindingChurn, ChangeType
+from src.main.api.data import CommitAlert, Commit, FileChange, DiffType, DiffDescription, CloneFindingChurn, ChangeType, CloneFinding
 from src.main.persistence import AlertFile, read_alert_file, write_to_file
 from src.main.pretty_print import MyPrinter, LogLevel, SEPARATOR
 from src.main.utils.time_utils import timestamp_to_str, display_time
@@ -247,9 +247,14 @@ def inspect_clone_finding_churn(analysis_result, client, commit, expected_file, 
     clone_findings_count will be increased by one."""
     clone_finding_churn: CloneFindingChurn = get_clone_finding_churn(client, commit.timestamp)
     clone_finding_churn = filter_clone_finding_churn_by_file([expected_file, expected_sibling], clone_finding_churn)
-    if not clone_finding_churn.is_empty():
-        printer.yellow(str(clone_finding_churn), level=LogLevel.INFO)
-        for s in clone_finding_churn.get_finding_links(client, commit.timestamp):
-            printer.blue(s, level=LogLevel.INFO)
-        if clone_finding_churn.is_relevant():
-            analysis_result.clone_findings_count += 1
+    relevant: [CloneFinding] = filter_relevant_clone_findings(clone_finding_churn, expected_file, expected_sibling, analysis_result)
+    if relevant:
+        printer.red('Found possibly relevant clone findings: ', LogLevel.RELEVANT)
+        printer.yellow(
+            ',\n'.join(
+                str(finding) + "\n" + finding.get_finding_link(client=client, commit_timestamp=commit.timestamp)
+                for finding in relevant
+            )
+            , level=LogLevel.INFO
+        )
+        analysis_result.clone_findings_count += len(relevant)

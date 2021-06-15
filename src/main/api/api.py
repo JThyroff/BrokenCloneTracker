@@ -7,9 +7,9 @@ from defintions import JAVA_INT_MAX
 from src.main.api.api_utils import get_project_api_service_url, get_global_service_url
 from src.main.api.data import Commit, CommitAlert, FileChange, DiffDescription, DiffType, CloneFindingChurn, TokenElementChurnInfo
 from src.main.pretty_print import MyPrinter, LogLevel
-from src.main.utils.time_utils import timestamp_to_str
+from src.main.utils.time_utils import timestamp_to_str, add_branch
 
-printer: MyPrinter = MyPrinter(LogLevel.DUMP)
+printer: MyPrinter = MyPrinter(LogLevel.VERBOSE)
 
 
 def get_repository_commits(client: TeamscaleClient, start_commit_timestamp: int, end_commit_timestamp,
@@ -50,16 +50,17 @@ def get_repository_commits(client: TeamscaleClient, start_commit_timestamp: int,
     return commit_list
 
 
-def get_commit_alerts(client: TeamscaleClient, commit_timestamps: [int]) -> dict[Commit, [CommitAlert]]:
+def get_commit_alerts(client: TeamscaleClient, commit_timestamp: int) -> dict[Commit, [CommitAlert]]:
     """
     get commit alerts for given commit timestamps. Returns a tuple list of (Commit, [CommitAlert])
     Section: default
     """
+    commit_timestamp = add_branch(client, commit_timestamp)
     url = get_project_api_service_url(client, "commit-alerts")
-    parameters = {"commit": commit_timestamps}
+    parameters = {"commit": commit_timestamp}
 
     printer.separator(level=LogLevel.DEBUG)
-    printer.yellow("Getting commit alerts for timestamp " + str(commit_timestamps) + " at URL: " + str(url),
+    printer.yellow("Getting commit alerts for timestamp " + str(commit_timestamp) + " at URL: " + str(url),
                    level=LogLevel.DEBUG)
 
     response: requests.Response = client.get(url, parameters)
@@ -83,6 +84,7 @@ def get_affected_files(client: TeamscaleClient, commit_timestamp: int) -> [FileC
     """
     get affected files for given commit timestamp.
     """
+    commit_timestamp = add_branch(client, commit_timestamp)
     url = get_project_api_service_url(client, "commits/affected-files")
     parameters = {"commit": commit_timestamp}
 
@@ -105,6 +107,9 @@ def get_affected_files(client: TeamscaleClient, commit_timestamp: int) -> [FileC
 def get_diff(client: TeamscaleClient, left_file: str, left_commit_timestamp: int, right_file: str,
              right_commit_timestamp) -> dict[DiffType: DiffDescription]:
     """get a diff for two files and given timestamps"""
+
+    left_commit_timestamp = add_branch(client, left_commit_timestamp)
+    right_commit_timestamp = add_branch(client, right_commit_timestamp)
     url = get_global_service_url(client, "api/compare-elements")
     left = str(client.project) + "/" + left_file + "#@#" + str(left_commit_timestamp)
     right = str(client.project) + "/" + right_file + "#@#" + str(right_commit_timestamp)
@@ -150,6 +155,7 @@ def get_repository_summary(client: TeamscaleClient) -> tuple[int, int]:
 
 def get_clone_finding_churn(client: TeamscaleClient, commit_timestamp: int) -> CloneFindingChurn:
     """get clone finding churn for given commit timestamp"""
+    commit_timestamp = add_branch(client, commit_timestamp)
     printer.white("Getting clone finding churn for commit: " + str(commit_timestamp), LogLevel.DEBUG)
     url = get_project_api_service_url(client, "finding-churn/list")
     parameters = {

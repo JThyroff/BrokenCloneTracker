@@ -55,8 +55,8 @@ def parse_args() -> TeamscaleClient:
     printer.separator(level=LogLevel.CRUCIAL)
     printer.yellow("Parsed Arguments:", level=LogLevel.CRUCIAL)
     printer.white("%s\n%s\n%s\n%s" % (
-        "Teamscale URL :" + str(teamscale_url), "Username :" + str(username), "Access Token :" + str(access_token),
-        "Project ID :" + str(project_id)), level=LogLevel.CRUCIAL)
+        "Teamscale URL : " + str(teamscale_url), "Username : " + str(username), "Access Token : " + str(access_token),
+        "Project ID : " + str(project_id)), level=LogLevel.CRUCIAL)
     printer.separator(level=LogLevel.CRUCIAL)
 
     return TeamscaleClient(teamscale_url, username, access_token, project_id)

@@ -137,6 +137,37 @@ def filter_clone_finding_churn_by_file(file_uniform_paths: [str], clone_finding_
     return clone_finding_churn
 
 
+def filter_relevant_clone_findings(
+        clone_finding_churn: CloneFindingChurn, expected_file: str, expected_sibling: str, analysis_result: AnalysisResult
+) -> [CloneFinding]:
+    """Filter for clone findings which are actually newly introduced"""
+    instance_start = analysis_result.instance_metrics.corrected_start_line
+    instance_end = analysis_result.instance_metrics.corrected_end_line
+    instance_interval = portion.closedopen(instance_start, instance_end)
+    sibling_start = analysis_result.sibling_instance_metrics.corrected_start_line
+    sibling_end = analysis_result.sibling_instance_metrics.corrected_end_line
+    sibling_interval = portion.closedopen(sibling_start, sibling_end)
+
+    threshold = 0.5
+    relevant = []
+    for clone_finding in (
+            clone_finding_churn.added_findings + clone_finding_churn.findings_added_in_branch + clone_finding_churn.findings_in_changed_code
+    ):
+        clone_finding: CloneFinding
+        locations = [clone_finding.location, *clone_finding.sibling_locations]
+        b = [False, False]
+        for loc in locations:
+            # check whether the clone matches the two files with the corresponding intervals more than threshold
+            if loc.is_overlapping_more_than_threshold(expected_file, instance_interval, threshold):
+                b[0] = True
+            if loc.is_overlapping_more_than_threshold(expected_sibling, sibling_interval, threshold):
+                b[1] = True
+
+        if b == [True, True] and clone_finding.death_commit is None:
+            relevant.append(clone_finding)
+    return relevant
+
+
 def is_file_affected_at_clone_finding_churn(file_uniform_path: str, clone_finding_churn: CloneFindingChurn) -> bool:
     """returns whether given file is affected by given CloneFindingChurn."""
     clone_finding_churn = filter_clone_finding_churn_by_file(file_uniform_path, clone_finding_churn)

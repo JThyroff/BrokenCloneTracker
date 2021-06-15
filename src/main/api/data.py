@@ -1,10 +1,12 @@
 from dataclasses import dataclass
 from enum import Enum
 
+import portion
+from portion import Interval
 from teamscale_client import TeamscaleClient
 from teamscale_client.utils import auto_str
 
-from src.main.utils.interval_utils import list_to_interval_list
+from src.main.utils.interval_utils import list_to_interval_list, overlaps_more_than_threshold
 
 
 @auto_str
@@ -53,7 +55,7 @@ class TextRegionLocation(object):
         self.uniform_path = uniform_path  # also file path ?
 
     def __str__(self):
-        return "Location: " + self.uniform_path + " " + self.get_interval()
+        return "Location: " + self.uniform_path + " " + self.get_str_interval()
 
     def __eq__(self, other):
         if not isinstance(other, TextRegionLocation):
@@ -71,7 +73,15 @@ class TextRegionLocation(object):
                     and self.uniform_path == other.uniform_path
             )
 
+    def is_overlapping_more_than_threshold(self, other_path: str, other_interval: Interval, threshold: float):
+        if self.uniform_path == other_path and overlaps_more_than_threshold(self.get_interval(), other_interval, threshold):
+            return True
+        return False
+
     def get_interval(self):
+        return portion.closedopen(self.raw_start_line, self.raw_end_line)
+
+    def get_str_interval(self):
         return "[" + str(self.raw_start_line) + "-" + str(self.raw_end_line) + ")"
 
     def get_file_name(self) -> str:
@@ -134,9 +144,9 @@ class CommitAlert(object):
                 + "\n" + self.context.expected_clone_location.get_file_name()
                 + " and " + self.context.expected_sibling_location.get_file_name()
                 + "\nExpected clone location: " + self.context.expected_clone_location.uniform_path
-                + "\nInstance interval: " + self.context.expected_clone_location.get_interval()
+                + "\nInstance interval: " + self.context.expected_clone_location.get_str_interval()
                 + "\nExpected sibling location: " + self.context.expected_sibling_location.uniform_path
-                + "\nSibling interval: " + self.context.expected_sibling_location.get_interval())
+                + "\nSibling interval: " + self.context.expected_sibling_location.get_str_interval())
 
     def get_broken_clone_link(self, client: TeamscaleClient, commit_timestamp: int) -> str:
         # return link to broken clone
@@ -386,13 +396,6 @@ class CloneFindingChurn:
             clone_finding: CloneFinding
             links.append(clone_finding.get_finding_link(client, commit_timestamp))
         return links
-
-    def is_relevant(self):  # TODO adjust findings in changed code
-        for clone_finding in self.added_findings + self.findings_added_in_branch + self.findings_in_changed_code:
-            clone_finding: CloneFinding
-            if clone_finding.death_commit is None:
-                return True
-        return False
 
     def is_empty(self):
         return not (self.added_findings or self.findings_added_in_branch or self.findings_in_changed_code

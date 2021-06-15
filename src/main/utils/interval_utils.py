@@ -21,6 +21,9 @@ def list_to_interval_list(int_list: [int]) -> [Interval]:
 
 
 def overlaps_more_than_threshold(interval: Interval, other: Interval, threshold: float) -> bool:
+    """Checks whether two given intervals are overlapping more than a given threshold.
+        [0,10] and [2,12] with threshold 50% -> yes they are overlapping more than 50%
+    """
     if threshold <= 0 or threshold > 1:
         raise ValueError("Threshold should be greater than zero and smaller equals one.")
 
