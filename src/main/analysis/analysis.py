@@ -83,6 +83,12 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
         analysis_start: int = alert_commit_timestamp + 1
         analysis_step: int = 7890000_000  # milliseconds. 3 months # 15555555_000 ~ 6 months
 
+        # get repository data in chunks - this was to be able to write temporary results to a file
+        # this is maybe unnecessary yet
+        expected_file = commit_alert.context.expected_clone_location.uniform_path
+        expected_sibling = commit_alert.context.expected_sibling_location.uniform_path
+        previous_commit_timestamp = alert_commit_timestamp
+
         while analysis_start < repository_summary[1]:
             step = analysis_start + analysis_step
             if step > repository_summary[1]:
@@ -91,11 +97,6 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                 printer.yellow("Both relevant sections are deleted. Skipping rest of analysis.", level=LogLevel.VERBOSE)
                 analysis_result.analysed_until = repository_summary[1]
                 break
-            # get repository data in chunks - this was to be able to write temporary results to a file
-            # this is maybe unnecessary yet
-            expected_file = commit_alert.context.expected_clone_location.uniform_path
-            expected_sibling = commit_alert.context.expected_sibling_location.uniform_path
-            previous_commit_timestamp = alert_commit_timestamp
 
             if (not (get_delta_affected_files(client, analysis_start, step, expected_file) is None
                      and get_delta_affected_files(client, analysis_start, step, expected_sibling) is None)):
