@@ -65,7 +65,6 @@ def get_commit_alerts(client: TeamscaleClient, commit_timestamp: int) -> dict[Co
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
-    printer.white(json.dumps(parsed, indent=4, sort_keys=False), level=LogLevel.DUMP)
 
     commit_alert_list_dict: dict[Commit, [CommitAlert]] = dict()
 
@@ -97,8 +96,6 @@ def get_affected_files(client: TeamscaleClient, commit_timestamp: int) -> [FileC
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
 
-    printer.white(json.dumps(parsed, indent=4, sort_keys=True), level=LogLevel.DUMP)
-
     affected_files: [FileChange] = [FileChange.from_json(j) for j in parsed]
 
     return affected_files
@@ -126,8 +123,6 @@ def get_diff(client: TeamscaleClient, left_file: str, left_commit_timestamp: int
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
-
-    printer.white(json.dumps(parsed, indent=4, sort_keys=True), level=LogLevel.DUMP)
 
     diff_dict = {}
 
@@ -164,7 +159,6 @@ def get_clone_finding_churn(client: TeamscaleClient, commit_timestamp: int) -> C
 
     response: requests.Response = client.get(url, parameters)
     parsed = json.loads(response.text)
-    printer.white(json.dumps(parsed, indent=4, sort_keys=True), level=LogLevel.DUMP)
 
     clone_finding_churn: CloneFindingChurn = CloneFindingChurn.from_json(parsed)
 

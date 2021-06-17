@@ -52,7 +52,6 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
     """Analyzes one given alert commit. This function scans all commits after the given timestamp for relevant changes
     in the code base."""
     printer.yellow("Analysing one alert commit...", level=LogLevel.INFO)
-    printer.white("Timestamp : " + timestamp_to_str(alert_commit_timestamp), level=LogLevel.INFO)
 
     alerts: dict[Commit, [CommitAlert]] = get_commit_alerts(client, alert_commit_timestamp)
 
@@ -74,6 +73,7 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
         )
         # region logging
         printer.separator(level=LogLevel.VERBOSE)
+        printer.white("Timestamp : " + timestamp_to_str(alert_commit_timestamp), level=LogLevel.INFO)
         printer.yellow("Analysing " + str(commit_alert), level=LogLevel.VERBOSE)
         printer.white("Link to Broken Clone: " + commit_alert.get_broken_clone_link(client, alert_commit_timestamp), level=LogLevel.VERBOSE)
         printer.white("Link to Old Clone: " + commit_alert.get_old_clone_link(client, alert_commit_timestamp), level=LogLevel.VERBOSE)
@@ -245,6 +245,10 @@ def interpret_affectedness(analysis_result, instance_affectedness, sibling_insta
 def inspect_clone_finding_churn(analysis_result, client, commit, expected_file, expected_sibling):
     """Get clone finding churn and filter it for clones where both files are affected. If there is a new clone added in this churn the
     clone_findings_count will be increased by one."""
+    if analysis_result.instance_metrics.deleted or analysis_result.sibling_instance_metrics.deleted:
+        # if at least one instance is already deleted, a new clone can not exist
+        return
+
     clone_finding_churn: CloneFindingChurn = get_clone_finding_churn(client, commit.timestamp)
     clone_finding_churn = filter_clone_finding_churn_by_file([expected_file, expected_sibling], clone_finding_churn)
     relevant: [CloneFinding] = filter_relevant_clone_findings(clone_finding_churn, expected_file, expected_sibling, analysis_result)

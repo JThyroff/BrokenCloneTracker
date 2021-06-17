@@ -268,7 +268,8 @@ def correct_lines(loc_start_line: int, loc_end_line: int, diff_desc: DiffDescrip
             if right_length == 0 or (right_interval == portion.closedopen(1, 2)):  # the relevant section was deleted
                 raise TextSectionDeletedError("The relevant text section was deleted with this diff.")
             else:
-                raise NotImplementedError("I currently do not know how to handle this special case")
+                # else track the whole interval now
+                return right_interval.lower, right_interval.upper
         elif left_interval <= loc_interval:
             # the modification is left of the upper bound of the relevant passage. So the end line is affected for sure.
             # what about the start line?
