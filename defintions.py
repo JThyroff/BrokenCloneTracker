@@ -13,6 +13,8 @@ FILE_NAME_RESULT = 'results.json'
 
 JAVA_INT_MAX = 2147483647
 
+NEW_CLONE_SIMILARITY_THRESHOLD = 0.8
+
 
 def get_project_dir(project: str) -> str:
     return ROOT_DIR + '/' + PROJECTS_DIR + '/' + project

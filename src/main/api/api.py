@@ -70,6 +70,9 @@ def get_commit_alerts(client: TeamscaleClient, commit_timestamp: int) -> dict[Co
 
     for commit_alert_dict_entry in parsed:
         alert_list: [CommitAlert] = []
+        if commit_alert_dict_entry is None:
+            raise RuntimeError('There is no commit in the project for the given timestamp in the given branch. Maybe the timestamp is '
+                               'from a commit in another branch?')
         for entry in commit_alert_dict_entry['alerts']:
             alert_list.append(CommitAlert.from_json(entry))
         commit: Commit = Commit.from_json(commit_alert_dict_entry['commit'])

@@ -4,6 +4,7 @@ from enum import Enum
 import portion
 from portion import Interval
 
+from defintions import NEW_CLONE_SIMILARITY_THRESHOLD
 from src.main.api.data import FileChange, DiffDescription, CloneFindingChurn, CloneFinding, CommitAlert, \
     CommitAlertContext
 from src.main.pretty_print import SEPARATOR
@@ -148,7 +149,6 @@ def filter_relevant_clone_findings(
     sibling_end = analysis_result.sibling_instance_metrics.corrected_end_line
     sibling_interval = portion.closedopen(sibling_start, sibling_end)
 
-    threshold = 0.5
     relevant = []
     for clone_finding in (
             clone_finding_churn.added_findings + clone_finding_churn.findings_added_in_branch + clone_finding_churn.findings_in_changed_code
@@ -158,9 +158,9 @@ def filter_relevant_clone_findings(
         b = [False, False]
         for loc in locations:
             # check whether the clone matches the two files with the corresponding intervals more than threshold
-            if loc.is_overlapping_more_than_threshold(expected_file, instance_interval, threshold):
+            if loc.is_overlapping_more_than_threshold(expected_file, instance_interval, NEW_CLONE_SIMILARITY_THRESHOLD):
                 b[0] = True
-            if loc.is_overlapping_more_than_threshold(expected_sibling, sibling_interval, threshold):
+            if loc.is_overlapping_more_than_threshold(expected_sibling, sibling_interval, NEW_CLONE_SIMILARITY_THRESHOLD):
                 b[1] = True
 
         if b == [True, True] and clone_finding.death_commit is None:
