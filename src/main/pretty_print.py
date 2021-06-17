@@ -59,8 +59,12 @@ class MyPrinter:
 
     def blue(self, text: str, level: LogLevel = LogLevel.NONE):
         if level.compare(self.LOG_LEVEL):
-            print(get_prefix() + Fore.BLUE + Style.DIM + stuff_text(text) + Style.RESET_ALL)
+            print(get_prefix() + Fore.LIGHTBLUE_EX + Style.DIM + stuff_text(text) + Style.RESET_ALL)
 
     def red(self, text: str, level: LogLevel = LogLevel.NONE):
         if level.compare(self.LOG_LEVEL):
-            print(get_prefix() + Fore.RED + Style.DIM + stuff_text(text) + Style.RESET_ALL)
+            print(get_prefix() + Fore.LIGHTRED_EX + Style.DIM + stuff_text(text) + Style.RESET_ALL)
+
+    def green(self, text: str, level: LogLevel = LogLevel.NONE):
+        if level.compare(self.LOG_LEVEL):
+            print(get_prefix() + Fore.GREEN + Style.DIM + stuff_text(text) + Style.RESET_ALL)

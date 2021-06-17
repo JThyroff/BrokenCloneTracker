@@ -87,7 +87,6 @@ def run_analysis(client: TeamscaleClient):
 
 def main(client: TeamscaleClient) -> None:
     client.check_api_version()
-    client.branch = "main"
 
     def read_and_plot():
         result_dict: dict = read_from_file(get_result_file_name(client.project))
@@ -95,11 +94,11 @@ def main(client: TeamscaleClient) -> None:
         failed_runs = result_dict.get("failed runs")
         plot_results(client.project, successful_runs, failed_runs)
 
-    update_filtered_alert_commits(client, overwrite=True)
+    run_analysis(client)
     return
+    update_filtered_alert_commits(client, overwrite=True)
     read_and_plot()
     analyse_one_alert_commit(client, 1485528948779)
-    run_analysis(client)
     get_affected_files(client, 1612210799000)
 
 

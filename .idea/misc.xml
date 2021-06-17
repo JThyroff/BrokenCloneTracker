@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectPlainTextFileTypeManager">
     <file url="file://$PROJECT_DIR$/teamscale-client.config" />
+    <file url="file://$PROJECT_DIR$/teamscale-client.config" />
   </component>
   <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.9 (BrokenCloneTracker)" project-jdk-type="Python SDK" />
 </project>

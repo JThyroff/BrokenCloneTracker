@@ -73,7 +73,7 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
         )
         # region logging
         printer.separator(level=LogLevel.VERBOSE)
-        printer.white("Timestamp : " + timestamp_to_str(alert_commit_timestamp), level=LogLevel.INFO)
+        printer.blue("Timestamp : " + timestamp_to_str(alert_commit_timestamp), level=LogLevel.INFO)
         printer.yellow("Analysing " + str(commit_alert), level=LogLevel.VERBOSE)
         printer.white("Link to Broken Clone: " + commit_alert.get_broken_clone_link(client, alert_commit_timestamp), level=LogLevel.VERBOSE)
         printer.white("Link to Old Clone: " + commit_alert.get_old_clone_link(client, alert_commit_timestamp), level=LogLevel.VERBOSE)
@@ -94,7 +94,7 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
             if step > repository_summary[1]:
                 step = repository_summary[1]
             if analysis_result.sibling_instance_metrics.deleted and analysis_result.instance_metrics.deleted:
-                printer.yellow("Both relevant sections are deleted. Skipping rest of analysis.", level=LogLevel.VERBOSE)
+                printer.green("Both relevant sections are deleted. Skipping rest of analysis.", level=LogLevel.VERBOSE)
                 analysis_result.analysed_until = repository_summary[1]
                 break
 
@@ -144,7 +144,7 @@ def analyse_one_alert_commit(client: TeamscaleClient, alert_commit_timestamp: in
                 # end for
             # end if
             else:
-                printer.red("S K I P  :  " + display_time(analysis_step) + " : No File affected in this Interval.")
+                printer.green("S K I P  :  " + display_time(analysis_step) + " : No File affected in this Interval.")
             analysis_start = step + 1
             analysis_result.analysed_until = step
             pass
