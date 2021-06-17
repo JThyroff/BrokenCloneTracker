@@ -132,3 +132,5 @@ dmypy.json
 projects/*
 # ignore out
 out/*
+
+teamscale-client.config
