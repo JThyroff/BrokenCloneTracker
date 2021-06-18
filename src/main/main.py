@@ -1,11 +1,13 @@
 import time
 import traceback
 from functools import reduce
+from pathlib import Path
 
+import matplotlib
 import matplotlib.pyplot as plt
 from teamscale_client import TeamscaleClient
 
-from defintions import get_result_file_name
+from defintions import get_result_file_name, get_pgf_dir
 from src.main.analysis.analysis import update_filtered_alert_commits, analyse_one_alert_commit
 from src.main.analysis.analysis_utils import AnalysisResult
 from src.main.api.api import get_affected_files
@@ -31,7 +33,7 @@ def show_projects(client: TeamscaleClient) -> None:
     printer.separator()
 
 
-def plot_results(project: str, successful_runs, failed_runs):
+def plot_results(project: str, successful_runs, failed_runs, pgf=False):
     printer.blue("Successful runs: ", LogLevel.RELEVANT)
     printer.white(", ".join(str(entry[0]) for entry in successful_runs), LogLevel.RELEVANT)
     printer.blue("Failed runs: ", LogLevel.RELEVANT)
@@ -46,10 +48,19 @@ def plot_results(project: str, successful_runs, failed_runs):
         , LogLevel.RELEVANT
     )
 
-    plot_pie(project, successful_runs, failed_runs, successful_result_count)
-    plot_bar(project, successful_runs, successful_result_count)
-    plot_instance_metrics(project, successful_runs, failed_runs, boxplot=True, with_file_affections=False)
-    plot_instance_metrics(project, successful_runs, failed_runs, with_file_affections=False)
+    if pgf:
+        Path(get_pgf_dir(project)).mkdir(parents=True, exist_ok=True)
+        matplotlib.use("pgf")
+        matplotlib.rcParams.update({
+            "pgf.texsystem": "pdflatex",
+            'font.family': 'serif',
+            'text.usetex': True,
+            'pgf.rcfonts': False,
+        })
+    plot_pie(project, successful_runs, failed_runs, successful_result_count, pgf=pgf)
+    plot_bar(project, successful_runs, successful_result_count, pgf=pgf)
+    plot_instance_metrics(project, successful_runs, failed_runs, boxplot=True, with_file_affections=False, pgf=pgf)
+    plot_instance_metrics(project, successful_runs, failed_runs, with_file_affections=False, pgf=pgf)
 
     plt.show()
 
@@ -88,17 +99,17 @@ def run_analysis(client: TeamscaleClient):
 def main(client: TeamscaleClient) -> None:
     client.check_api_version()
 
-    def read_and_plot():
+    def read_and_plot(pgf=False):
         result_dict: dict = read_from_file(get_result_file_name(client.project))
         successful_runs = result_dict.get("successful runs")
         failed_runs = result_dict.get("failed runs")
-        plot_results(client.project, successful_runs, failed_runs)
+        plot_results(client.project, successful_runs, failed_runs, pgf=pgf)
 
-    run_analysis(client)
+    read_and_plot(pgf=True)
     return
+    analyse_one_alert_commit(client, 1458855786000)
+    run_analysis(client)
     update_filtered_alert_commits(client, overwrite=True)
-    read_and_plot()
-    analyse_one_alert_commit(client, 1485528948779)
     get_affected_files(client, 1612210799000)
 
 

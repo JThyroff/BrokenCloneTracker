@@ -14,6 +14,11 @@ FILE_NAME_RESULT = 'results.json'
 JAVA_INT_MAX = 2147483647
 
 NEW_CLONE_SIMILARITY_THRESHOLD = 0.8
+LATEX_TEXT_WIDTH = 418.25555
+
+
+def get_pgf_dir(project: str) -> str:
+    return ROOT_DIR + '/' + PROJECTS_DIR + '/' + project + '/pgf/'
 
 
 def get_project_dir(project: str) -> str:

@@ -5,12 +5,46 @@ import matplotlib.colors as m_colors
 import numpy as np
 from matplotlib import pyplot as plt
 
-from defintions import get_window_title
+from defintions import get_window_title, get_pgf_dir, LATEX_TEXT_WIDTH
 from src.main.analysis.analysis_utils import AnalysisResult
 from src.main.utils.time_utils import display_time
 
 
-def plot_pie(project: str, successful_runs, failed_runs, successful_result_count):
+# https://jwalton.info/Matplotlib-latex-PGF/
+# \showthe\textwidth
+def set_size(width_pt, fraction=1, subplots=(1, 1)):
+    """Set figure dimensions to sit nicely in our document.
+
+    Parameters
+    ----------
+    width_pt: float
+            Document width in points
+    fraction: float, optional
+            Fraction of the width which you wish the figure to occupy
+    subplots: array-like, optional
+            The number of rows and columns of subplots.
+    Returns
+    -------
+    fig_dim: tuple
+            Dimensions of figure in inches
+    """
+    # Width of figure (in pts)
+    fig_width_pt = width_pt * fraction
+    # Convert from pt to inches
+    inches_per_pt = 1 / 72.27
+
+    # Golden ratio to set aesthetic figure height
+    golden_ratio = (5 ** .5 - 1) / 2
+
+    # Figure width in inches
+    fig_width_in = fig_width_pt * inches_per_pt
+    # Figure height in inches
+    fig_height_in = fig_width_in * golden_ratio * (subplots[0] / subplots[1])
+
+    return fig_width_in, fig_height_in
+
+
+def plot_pie(project: str, successful_runs, failed_runs, successful_result_count, pgf=False):
     not_modified_count = 0
     one_instance_affected_critical_count = 0
     both_instances_affected_critical_count = 0
@@ -64,18 +98,21 @@ def plot_pie(project: str, successful_runs, failed_runs, successful_result_count
         , tab_colors.get("tab:purple"), tab_colors.get("tab:pink"), tab_colors.get("tab:red")
     )
 
-    fig1, ax1 = plt.subplots(figsize=(12, 8))
+    x, y = set_size(LATEX_TEXT_WIDTH)
+    fig1, ax1 = plt.subplots(figsize=(x, y + 3))
     ax1.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=False, startangle=180, colors=color_set)
     ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
     my_circle = plt.Circle((0, 0), 0.7, color='white')
     ax1.add_artist(my_circle)
     fig1.canvas.set_window_title(get_window_title(project))
-    plt.legend(loc=(-0.14, -0.12))
+    plt.legend(loc=(-0.0, -0.0))
     fig1.tight_layout()
+    if pgf:
+        plt.savefig(get_pgf_dir(project) + project + '_pie.pgf')
 
 
-def plot_instance_metrics(project, successful_runs, failed_runs, boxplot=False, with_file_affections=True):
-    fig, axs = plt.subplots(figsize=(10, 6))
+def plot_instance_metrics(project, successful_runs, failed_runs, boxplot=False, with_file_affections=True, pgf=False):
+    fig, axs = plt.subplots(figsize=set_size(LATEX_TEXT_WIDTH))
 
     one_file_affected_count_list = []
     both_files_affected_critical_count_list = []
@@ -123,7 +160,7 @@ def plot_instance_metrics(project, successful_runs, failed_runs, boxplot=False, 
     total = []
     for i in all_data:
         total += i
-    axs.set_xticks([x for x in range(0, max(total) + 1, 5)])
+    axs.set_xticks([x for x in range(0, max(total) + 1, 3)])
     # add y-tick labels
 
     plt.setp(
@@ -138,9 +175,14 @@ def plot_instance_metrics(project, successful_runs, failed_runs, boxplot=False, 
     axs.invert_yaxis()
     fig.canvas.set_window_title(get_window_title(project))
     fig.tight_layout()
+    if pgf:
+        if boxplot:
+            plt.savefig(get_pgf_dir(project) + project + '_box.pgf')
+        else:
+            plt.savefig(get_pgf_dir(project) + project + '_violin.pgf')
 
 
-def plot_bar(project, successful_runs, successful_result_count):
+def plot_bar(project, successful_runs, successful_result_count, pgf=False):
     instance_deleted_count = 0
     sibling_deleted_count = 0
     one_instance_deleted_count = 0
@@ -172,7 +214,7 @@ def plot_bar(project, successful_runs, successful_result_count):
     y = np.arange(len(labels))  # the label locations
     width = 0.35  # the width of the bars
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=set_size(LATEX_TEXT_WIDTH))
     rects1 = ax.barh(y - width / 2, true_count, width, label='True')
     rects2 = ax.barh(y + width / 2, false_count, width, label='False')
 
@@ -186,3 +228,5 @@ def plot_bar(project, successful_runs, successful_result_count):
     #   ax.bar_label(rects2, padding=3)
     fig.canvas.set_window_title(get_window_title(project))
     fig.tight_layout()
+    if pgf:
+        plt.savefig(get_pgf_dir(project) + project + '_bar.pgf')
