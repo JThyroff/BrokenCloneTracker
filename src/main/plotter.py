@@ -46,8 +46,8 @@ def set_size(width_pt, fraction=1, subplots=(1, 1)):
 
 def plot_pie(project: str, successful_runs, failed_runs, successful_result_count, pgf=False):
     not_modified_count = 0
-    one_instance_affected_critical_count = 0
-    both_instances_affected_critical_count = 0
+    one_instance_affected_count = 0
+    both_instances_affected_count = 0
     instance_deletion_count = 0
     both_instances_deleted_count = 0
     clone_finding_count = 0
@@ -56,9 +56,9 @@ def plot_pie(project: str, successful_runs, failed_runs, successful_result_count
     #               0. Deletion of both passages        -> Both relevant text passages were deleted in further development
     #               1. Deletion of relevant passage     -> A relevant text passage was deleted in further development
     #               2. New clone finding                -> The broken clone seems to appear as normal clone afterwards
-    #               3. Only one instance affected critic-> The broken clone was modified at one point in time only at one text passage
+    #               3. one instance affected            -> The broken clone was modified at one point in time only at one text passage
     #                                                       => possibly even more inconsistency introduced
-    #               4. Both instance affected critical  -> The relevant text passages are at least modified once together
+    #               4. Both instances affected          -> The relevant text passages are at least modified once together
     #                                                       => possibly consistent maintenance
     #               5. Not modified at all              -> after the introduction of the broken clone the relevant text passages were not
     #                                                       modified at all
@@ -72,21 +72,21 @@ def plot_pie(project: str, successful_runs, failed_runs, successful_result_count
                 instance_deletion_count += 1
             elif result.clone_findings_count != 0:
                 clone_finding_count += 1
-            elif result.one_instance_affected_critical_count != 0:
-                one_instance_affected_critical_count += 1
-            elif result.both_instances_affected_critical_count != 0:
-                both_instances_affected_critical_count += 1
+            elif result.one_instance_affected_count != 0:
+                one_instance_affected_count += 1
+            elif result.both_instances_affected_count != 0:
+                both_instances_affected_count += 1
             else:
                 not_modified_count += 1
 
     labels = (
-        'Not Modified at All', 'New Clone', 'Only One Affected Critical', 'Both Affected Critical', 'Only One Instance Deleted'
+        'Not Modified at All', 'New Clone', 'One Instance Affected', 'Both Instances Affected', 'One Instance Deleted'
         , 'Both Instances Deleted', 'Analysis Error'
     )
     run_count = len(failed_runs) + successful_result_count
     sizes = [
-        not_modified_count / run_count, clone_finding_count / run_count, one_instance_affected_critical_count / run_count
-        , both_instances_affected_critical_count / run_count, instance_deletion_count / run_count
+        not_modified_count / run_count, clone_finding_count / run_count, one_instance_affected_count / run_count
+        , both_instances_affected_count / run_count, instance_deletion_count / run_count
         , both_instances_deleted_count / run_count, len(failed_runs) / run_count
     ]
     idx = sizes.index(max(sizes))
@@ -116,12 +116,12 @@ def plot_instance_metrics(project, successful_runs, failed_runs, boxplot=False, 
     fig, axs = plt.subplots(figsize=set_size(LATEX_TEXT_WIDTH))
 
     one_file_affected_count_list = []
-    both_files_affected_critical_count_list = []
-    one_instance_affected_critical_count_list = []
-    both_instances_affected_critical_count_list = []
+    both_files_affected_count_list = []
+    one_instance_affected_count_list = []
+    both_instances_affected_count_list = []
     # instance metrics
     file_affected_count_list = []
-    affected_critical_count_list = []
+    sum_affected_count_list = []
 
     clone_findings_count_list = []
 
@@ -129,23 +129,23 @@ def plot_instance_metrics(project, successful_runs, failed_runs, boxplot=False, 
         alert_commit_timestamp, results = run
         for r in results:
             one_file_affected_count_list.append(r.one_file_affected_count)
-            both_files_affected_critical_count_list.append(r.both_files_affected_count)
-            one_instance_affected_critical_count_list.append(r.one_instance_affected_critical_count)
-            both_instances_affected_critical_count_list.append(r.both_instances_affected_critical_count)
+            both_files_affected_count_list.append(r.both_files_affected_count)
+            one_instance_affected_count_list.append(r.one_instance_affected_count)
+            both_instances_affected_count_list.append(r.both_instances_affected_count)
             file_affected_count_list.append(r.instance_metrics.file_affected_count)
             file_affected_count_list.append(r.sibling_instance_metrics.file_affected_count)
-            affected_critical_count_list.append(r.instance_metrics.affected_critical_count)
-            affected_critical_count_list.append(r.sibling_instance_metrics.affected_critical_count)
+            sum_affected_count_list.append(r.instance_metrics.instance_affected_count)
+            sum_affected_count_list.append(r.sibling_instance_metrics.instance_affected_count)
             clone_findings_count_list.append(r.clone_findings_count)
 
     if with_file_affections:
         all_data = [
-            affected_critical_count_list, one_instance_affected_critical_count_list, both_instances_affected_critical_count_list
-            , file_affected_count_list, one_file_affected_count_list, both_files_affected_critical_count_list, clone_findings_count_list
+            sum_affected_count_list, one_instance_affected_count_list, both_instances_affected_count_list
+            , file_affected_count_list, one_file_affected_count_list, both_files_affected_count_list, clone_findings_count_list
         ]
     else:
         all_data = [
-            affected_critical_count_list, one_instance_affected_critical_count_list, both_instances_affected_critical_count_list
+            sum_affected_count_list, one_instance_affected_count_list, both_instances_affected_count_list
             , clone_findings_count_list
         ]
 
@@ -167,10 +167,10 @@ def plot_instance_metrics(project, successful_runs, failed_runs, boxplot=False, 
     plt.setp(
         axs, yticks=[y + 1 for y in range(len(all_data))]
         , yticklabels=[
-            'Affected Critical', 'One Instance Affected Critical', 'Both Instances Affected Critical', 'File Affected', 'One File Affected'
+            'Sum Affected', 'One Instance Affected', 'Both Instances Affected', 'File Affected', 'One File Affected'
             , 'Both Files Affected', 'New Clone Findings'
         ] if with_file_affections else [
-            'Affected Critical', 'One Instance Affected Critical', 'Both Instances Affected Critical', 'New Clone Findings'
+            'Sum Affected', 'One Instance Affected', 'Both Instances Affected', 'New Clone Findings'
         ]
     )
     axs.invert_yaxis()
@@ -184,6 +184,7 @@ def plot_instance_metrics(project, successful_runs, failed_runs, boxplot=False, 
 
 
 def plot_bar(project, successful_runs, successful_result_count, pgf=False):
+    # maybe save as percentage diagram
     instance_deleted_count = 0
     sibling_deleted_count = 0
     one_instance_deleted_count = 0

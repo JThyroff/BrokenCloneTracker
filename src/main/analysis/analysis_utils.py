@@ -22,8 +22,8 @@ class TextSectionDeletedError(Exception):
 
 class Affectedness(Enum):
     NOT_AFFECTED = 1
-    AFFECTED_BY_COMMIT = 2
-    AFFECTED_CRITICAL = 3
+    FILE_AFFECTED = 2
+    INSTANCE_AFFECTED = 3
 
     def __mul__(self, other):
         return self.value * other.value
@@ -37,7 +37,7 @@ class InstanceMetrics:
     corrected_start_line: int
     corrected_end_line: int
     file_affected_count: int = 0
-    affected_critical_count: int = 0
+    instance_affected_count: int = 0
     deleted: bool = False
     time_alive = -1
 
@@ -60,8 +60,8 @@ class AnalysisResult:
     #
     one_file_affected_count: int = 0
     both_files_affected_count: int = 0
-    one_instance_affected_critical_count: int = 0
-    both_instances_affected_critical_count: int = 0
+    one_instance_affected_count: int = 0
+    both_instances_affected_count: int = 0
     clone_findings_count: int = 0
 
     def __str__(self):
@@ -72,20 +72,20 @@ class AnalysisResult:
                 + "\n" + str(self.commit_alert)
                 + "\n" + SEPARATOR
                 + "\nFile affected count: " + str(self.instance_metrics.file_affected_count)
-                + "\nInstance affected critical count: " + str(self.instance_metrics.affected_critical_count)
+                + "\nInstance affected critical count: " + str(self.instance_metrics.instance_affected_count)
                 + "\nInstance deleted: " + str(self.instance_metrics.deleted)
                 + "\nCorrected instance interval: " + self.instance_metrics.get_corrected_interval()
                 + "\nInstance time alive: " + display_time(self.instance_metrics.time_alive) + " ~ " + str(self.instance_metrics.time_alive)
                 + "\nSibling file affected count: " + str(self.sibling_instance_metrics.file_affected_count)
-                + "\nSibling instance affected critical count: " + str(self.sibling_instance_metrics.affected_critical_count)
+                + "\nSibling instance affected critical count: " + str(self.sibling_instance_metrics.instance_affected_count)
                 + "\nSibling instance deleted: " + str(self.sibling_instance_metrics.deleted)
                 + "\nCorrected sibling interval: " + self.sibling_instance_metrics.get_corrected_interval()
                 + "\nSibling instance time alive: " + display_time(self.sibling_instance_metrics.time_alive)
                 + " ~ " + str(self.sibling_instance_metrics.time_alive)
                 + "\nOne file affected count: " + str(self.one_file_affected_count)
                 + "\nBoth files affected count: " + str(self.both_files_affected_count)
-                + "\nOne instance affected critical count: " + str(self.one_instance_affected_critical_count)
-                + "\nBoth instances affected critical count: " + str(self.both_instances_affected_critical_count)
+                + "\nOne instance affected count: " + str(self.one_instance_affected_count)
+                + "\nBoth instances affected count: " + str(self.both_instances_affected_count)
                 + "\nRelevant clone findings count: " + str(self.clone_findings_count))
 
     @staticmethod

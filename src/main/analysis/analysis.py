@@ -205,22 +205,22 @@ def check_file(file_path: str, client: TeamscaleClient, commit_timestamp: int, p
         if are_left_lines_affected_at_diff(
                 old_start_line, old_end_line, diff_dict.get(DiffType.TOKEN_BASED)
         ):
-            instance_metrics.affected_critical_count += 1
+            instance_metrics.instance_affected_count += 1
             printer.red(
-                file_name + " affected critical."
+                file_name + " affected in relevant interval."
                 + " interval [" + str(instance_metrics.corrected_start_line) + "-" + str(instance_metrics.corrected_end_line) + ")"
                 , LogLevel.INFO
             )
             printer.blue(link, LogLevel.INFO)
-            return Affectedness.AFFECTED_CRITICAL, file_path
+            return Affectedness.INSTANCE_AFFECTED, file_path
         else:
             instance_metrics.file_affected_count += 1
             printer.white(
-                file_name + " is not affected critical."
+                file_name + " is not affected in the relevant interval."
                 + " interval [" + str(instance_metrics.corrected_start_line) + "-" + str(instance_metrics.corrected_end_line) + ")"
                 , LogLevel.DEBUG)
             printer.blue(link, LogLevel.DEBUG)
-            return Affectedness.AFFECTED_BY_COMMIT, file_path
+            return Affectedness.FILE_AFFECTED, file_path
     else:
         return Affectedness.NOT_AFFECTED, file_path
 
@@ -229,17 +229,17 @@ def interpret_affectedness(analysis_result, instance_affectedness, sibling_insta
     """interprets the affectedness of the two instances, logs and increases the counters."""
     affectedness_product: int = instance_affectedness * sibling_instance_affectedness
     if affectedness_product == 9:
-        analysis_result.both_instances_affected_critical_count += 1
-        printer.red("-> Both affected critical", LogLevel.INFO)
+        analysis_result.both_instances_affected_count += 1
+        printer.red("-> Both instances affected", LogLevel.INFO)
     elif affectedness_product == 3 or affectedness_product == 6:
-        analysis_result.one_instance_affected_critical_count += 1
-        printer.red("-> One affected critical", LogLevel.INFO)
+        analysis_result.one_instance_affected_count += 1
+        printer.red("-> One instance affected", LogLevel.INFO)
     elif affectedness_product == 4:
         analysis_result.both_files_affected_count += 1
-        printer.white("-> Both affected", LogLevel.VERBOSE)
+        printer.white("-> Both files affected", LogLevel.VERBOSE)
     elif affectedness_product == 2:
         analysis_result.one_file_affected_count += 1
-        printer.white("-> One affected", LogLevel.VERBOSE)
+        printer.white("-> One file affected", LogLevel.VERBOSE)
 
 
 def inspect_clone_finding_churn(analysis_result, client, commit, expected_file, expected_sibling):
