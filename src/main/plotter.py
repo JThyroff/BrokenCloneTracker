@@ -7,10 +7,11 @@ from matplotlib import pyplot as plt
 
 from defintions import get_window_title, get_pgf_dir, LATEX_TEXT_WIDTH
 from src.main.analysis.analysis_utils import AnalysisResult
-
-
 # https://jwalton.info/Matplotlib-latex-PGF/
 # \showthe\textwidth
+from src.main.utils.time_utils import display_time
+
+
 def set_size(width_pt, fraction=1, subplots=(1, 1)):
     """Set figure dimensions to sit nicely in our document.
 
@@ -187,13 +188,14 @@ def plot_bar(project, successful_runs, successful_result_count, pgf=False):
     sibling_deleted_count = 0
     one_instance_deleted_count = 0
     both_instances_deleted_count = 0
-    avg_time_alive = 0
+    instance_time_alive = 0
+    sibling_time_alive = 0
     for run in successful_runs:
         alert_commit_timestamp, results = run
         for r in results:
             r: AnalysisResult
-            avg_time_alive += r.instance_metrics.time_alive
-            avg_time_alive += r.sibling_instance_metrics.time_alive
+            instance_time_alive += r.instance_metrics.time_alive
+            sibling_time_alive += r.sibling_instance_metrics.time_alive
             if r.instance_metrics.deleted:
                 instance_deleted_count += 1
             if r.sibling_instance_metrics.deleted:
@@ -223,9 +225,13 @@ def plot_bar(project, successful_runs, successful_result_count, pgf=False):
     ax.set_yticklabels(labels)
     ax.invert_yaxis()
     ax.legend()
-    # ax.set_title('Average Time Alive: ' + display_time(round(avg_time_alive / (2 * successful_result_count))))
+    avg_time_alive = round((instance_time_alive + sibling_time_alive) / (2 * successful_result_count))
+    ax.set_title('Deletion Metrics')
     #    ax.bar_label(rects1, padding=3)
     #   ax.bar_label(rects2, padding=3)
+    ax.text(x=0, y=4.4, s='Average Time Alive: = ' + display_time(avg_time_alive))
+    ax.text(x=0, y=4.8, s='Average instance lifetime = ' + display_time(round(instance_time_alive / successful_result_count)))
+    ax.text(x=0, y=5.2, s='Average sibling lifetime = ' + display_time(round(sibling_time_alive / successful_result_count)))
     fig.canvas.set_window_title(get_window_title(project))
     fig.tight_layout()
     if pgf:
