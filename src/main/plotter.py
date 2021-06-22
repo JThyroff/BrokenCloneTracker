@@ -7,7 +7,6 @@ from matplotlib import pyplot as plt
 
 from defintions import get_window_title, get_pgf_dir, LATEX_TEXT_WIDTH
 from src.main.analysis.analysis_utils import AnalysisResult
-from src.main.utils.time_utils import display_time
 
 
 # https://jwalton.info/Matplotlib-latex-PGF/
@@ -53,13 +52,14 @@ def plot_pie(project: str, successful_runs, failed_runs, successful_result_count
     clone_finding_count = 0
     # Interpretation of the result and categorization of the findings
     # Importance:  -1. Error while analysing            -> Fix code or special handling
-    #               0. Deletion of relevant passage     -> A relevant text passage was deleted in further development
-    #               1. New clone finding                -> The broken clone seems to appear as normal clone afterwards
-    #               2. Only one instance affected critic-> The broken clone was modified at one point in time only at one text passage
+    #               0. Deletion of both passages        -> Both relevant text passages were deleted in further development
+    #               1. Deletion of relevant passage     -> A relevant text passage was deleted in further development
+    #               2. New clone finding                -> The broken clone seems to appear as normal clone afterwards
+    #               3. Only one instance affected critic-> The broken clone was modified at one point in time only at one text passage
     #                                                       => possibly even more inconsistency introduced
-    #               3. Both instance affected critical  -> The relevant text passages are at least modified once together
+    #               4. Both instance affected critical  -> The relevant text passages are at least modified once together
     #                                                       => possibly consistent maintenance
-    #               4. Not modified at all              -> after the introduction of the broken clone the relevant text passages were not
+    #               5. Not modified at all              -> after the introduction of the broken clone the relevant text passages were not
     #                                                       modified at all
     for entry in successful_runs:  # TODO clone finding count?
         analysis_results: [AnalysisResult] = entry[1]
@@ -71,7 +71,7 @@ def plot_pie(project: str, successful_runs, failed_runs, successful_result_count
                 instance_deletion_count += 1
             elif result.clone_findings_count != 0:
                 clone_finding_count += 1
-            elif result.one_file_affected_count != 0:
+            elif result.one_instance_affected_critical_count != 0:
                 one_instance_affected_critical_count += 1
             elif result.both_instances_affected_critical_count != 0:
                 both_instances_affected_critical_count += 1
@@ -192,8 +192,8 @@ def plot_bar(project, successful_runs, successful_result_count, pgf=False):
         alert_commit_timestamp, results = run
         for r in results:
             r: AnalysisResult
-            avg_time_alive += r.instance_metrics.time_alive / (2 * successful_result_count)
-            avg_time_alive += r.sibling_instance_metrics.time_alive / (2 * successful_result_count)
+            avg_time_alive += r.instance_metrics.time_alive
+            avg_time_alive += r.sibling_instance_metrics.time_alive
             if r.instance_metrics.deleted:
                 instance_deleted_count += 1
             if r.sibling_instance_metrics.deleted:
@@ -223,7 +223,7 @@ def plot_bar(project, successful_runs, successful_result_count, pgf=False):
     ax.set_yticklabels(labels)
     ax.invert_yaxis()
     ax.legend()
-    ax.set_title('Average Time Alive: ' + display_time(int(avg_time_alive)))
+    # ax.set_title('Average Time Alive: ' + display_time(round(avg_time_alive / (2 * successful_result_count))))
     #    ax.bar_label(rects1, padding=3)
     #   ax.bar_label(rects2, padding=3)
     fig.canvas.set_window_title(get_window_title(project))

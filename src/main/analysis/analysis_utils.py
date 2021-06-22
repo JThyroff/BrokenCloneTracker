@@ -221,7 +221,7 @@ def deletion_pre_check(relevant_interval: Interval, diff_desc: DiffDescription):
         )
 
 
-def correct_lines(loc_start_line: int, loc_end_line: int, diff_desc: DiffDescription):
+def correct_lines(loc_start_line: int, loc_end_line: int, diff_desc: DiffDescription) -> (int, int):
     """ While tracking the relevant region of a broken clone by its affected lines, it could be the case
     that the relevant lines of one instance of the code clone are shifted due to code modifications in the lines
     above. This function addresses this issue and corrects the given line numbers respecting the diff.
