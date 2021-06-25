@@ -44,7 +44,7 @@ def set_size(width_pt, fraction=1, subplots=(1, 1)):
     return fig_width_in, fig_height_in
 
 
-def plot_pie(project: str, successful_runs, failed_runs, successful_result_count, pgf=False):
+def plot_pie(project: str, successful_runs, failed_runs, successful_result_count, pgf=False, analysis_error=False):
     not_modified_count = 0
     one_instance_affected_count = 0
     both_instances_affected_count = 0
@@ -79,16 +79,30 @@ def plot_pie(project: str, successful_runs, failed_runs, successful_result_count
             else:
                 not_modified_count += 1
 
-    labels = (
-        'Not Modified at All', 'New Clone', 'One Instance Affected', 'Both Instances Affected', 'One Instance Deleted'
-        , 'Both Instances Deleted', 'Analysis Error'
-    )
+    labels: tuple
+    if analysis_error:
+        labels = (
+            'Not Modified at All', 'New Clone', 'One Instance Affected', 'Both Instances Affected', 'One Instance Deleted'
+            , 'Both Instances Deleted', 'Analysis Error'
+        )
+    else:
+        labels = (
+            'Not Modified at All', 'New Clone', 'One Instance Affected', 'Both Instances Affected', 'One Instance Deleted'
+            , 'Both Instances Deleted'
+        )
     run_count = len(failed_runs) + successful_result_count
-    sizes = [
-        not_modified_count / run_count, clone_finding_count / run_count, one_instance_affected_count / run_count
-        , both_instances_affected_count / run_count, instance_deletion_count / run_count
-        , both_instances_deleted_count / run_count, len(failed_runs) / run_count
-    ]
+    if analysis_error:
+        sizes = [
+            not_modified_count / run_count, clone_finding_count / run_count, one_instance_affected_count / run_count
+            , both_instances_affected_count / run_count, instance_deletion_count / run_count
+            , both_instances_deleted_count / run_count, len(failed_runs) / run_count
+        ]
+    else:
+        sizes = [
+            not_modified_count / run_count, clone_finding_count / run_count, one_instance_affected_count / run_count
+            , both_instances_affected_count / run_count, instance_deletion_count / run_count
+            , both_instances_deleted_count / run_count
+        ]
     idx = sizes.index(max(sizes))
     # all weights sum up to 1.0
     assert math.isclose(reduce(lambda a, b: a + b, sizes), 1.0, abs_tol=0.01)
@@ -100,13 +114,13 @@ def plot_pie(project: str, successful_runs, failed_runs, successful_result_count
     )
 
     x, y = set_size(LATEX_TEXT_WIDTH)
-    fig1, ax1 = plt.subplots(figsize=(x, y))
+    fig1, ax1 = plt.subplots(figsize=(x + 0.3, y + 1.5))
     ax1.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=False, startangle=180, colors=color_set)
     ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
     my_circle = plt.Circle((0, 0), 0.7, color='white')
     ax1.add_artist(my_circle)
     fig1.canvas.set_window_title(get_window_title(project))
-    # plt.legend(loc=(-0.0, -0.0))
+    plt.legend(loc=(0.7, 0.75))
     fig1.tight_layout()
     if pgf:
         plt.savefig(get_pgf_dir(project) + project + '_pie.pgf')
@@ -218,15 +232,16 @@ def plot_bar(project, successful_runs, successful_result_count, pgf=False):
     for i, j in zip(true_count, false_count):
         assert (i + j) == successful_result_count
 
-    y = np.arange(len(labels))  # the label locations
+    y_ticks = np.arange(len(labels))  # the label locations
     width = 0.35  # the width of the bars
 
-    fig, ax = plt.subplots(figsize=set_size(LATEX_TEXT_WIDTH))
-    rects1 = ax.barh(y - width / 2, true_count, width, label='True')
-    rects2 = ax.barh(y + width / 2, false_count, width, label='False')
+    pos_x, pos_y = set_size(LATEX_TEXT_WIDTH)
+    fig, ax = plt.subplots(figsize=(pos_x, pos_y - 2))
+    rects1 = ax.barh(y_ticks - width / 2, true_count, width, label='True')
+    rects2 = ax.barh(y_ticks + width / 2, false_count, width, label='False')
 
-    # Add some text for labels, title and custom y-axis tick labels, etc.
-    ax.set_yticks(y)
+    # Add some text for labels, title and custom y_ticks-axis tick labels, etc.
+    ax.set_yticks(y_ticks)
     ax.set_yticklabels(labels)
     ax.invert_yaxis()
     ax.legend()
@@ -235,10 +250,10 @@ def plot_bar(project, successful_runs, successful_result_count, pgf=False):
     ax.set_title('Deletion Metrics')
     #    ax.bar_label(rects1, padding=3)
     #   ax.bar_label(rects2, padding=3)
-    ax.text(x=0, y=4.4, s='Average time alive = ' + display_time(avg_time_alive))
-    ax.text(x=0, y=4.8, s='Average instance lifetime = ' + display_time(round(instance_time_alive / successful_result_count)))
-    ax.text(x=0, y=5.2, s='Average sibling lifetime = ' + display_time(round(sibling_time_alive / successful_result_count)))
-    ax.text(x=0, y=5.6, s='If deleted, avg time until deletion = ' + display_time(round(avg_time_until_deletion)))
+    ax.text(x=0, y=4.6, s='Average time alive = ' + display_time(avg_time_alive))
+    ax.text(x=0, y=5.1, s='Average instance lifetime = ' + display_time(round(instance_time_alive / successful_result_count)))
+    ax.text(x=0, y=5.6, s='Average sibling lifetime = ' + display_time(round(sibling_time_alive / successful_result_count)))
+    ax.text(x=0, y=6.6, s='If deleted, avg time until deletion = ' + display_time(round(avg_time_until_deletion)))
     fig.canvas.set_window_title(get_window_title(project))
 
     for p in ax.patches:
