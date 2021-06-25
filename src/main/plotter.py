@@ -3,6 +3,7 @@ from functools import reduce
 
 import matplotlib.colors as m_colors
 import numpy as np
+import seaborn as sns
 from matplotlib import pyplot as plt
 
 from defintions import get_window_title, get_pgf_dir, LATEX_TEXT_WIDTH
@@ -165,7 +166,19 @@ def plot_instance_metrics(project, successful_runs, failed_runs, boxplot=False, 
 
     # plot violin plot
     if boxplot:
-        axs.boxplot(all_data, showmeans=False, vert=False)
+        PROPS = {
+            'boxprops': {'facecolor': 'none', 'edgecolor': 'black'},
+            'medianprops': {'color': 'red'},
+            'whiskerprops': {'color': 'black'},
+            'capprops': {'color': 'black'}
+        }
+        flierprops = dict(markerfacecolor='0.75', markersize=2,
+                          linestyle='none')
+        colormap = 'plasma'
+        axs = sns.boxplot(data=all_data, dodge=True, palette=colormap, orient='h', flierprops=flierprops, **PROPS)
+        axs = sns.stripplot(data=all_data, jitter=True, marker="D", size=2, orient="h", palette=colormap, edgecolor='black', alpha=1)
+
+        # axs.boxplot(all_data, showmeans=False, vert=False)
     else:
         axs.violinplot(all_data, showmeans=False, showmedians=True, vert=False)
     axs.set_title('Instance Metrics')
@@ -175,11 +188,14 @@ def plot_instance_metrics(project, successful_runs, failed_runs, boxplot=False, 
     total = []
     for i in all_data:
         total += i
-    axs.set_xticks([x for x in range(0, max(total) + 1, 3)])
+    if with_file_affections:
+        axs.set_xticks([x for x in range(0, max(total) + 1, 9)])
+    else:
+        axs.set_xticks([x for x in range(0, max(total) + 1, 3)])
     # add y-tick labels
 
     plt.setp(
-        axs, yticks=[y + 1 for y in range(len(all_data))]
+        axs, yticks=[y if boxplot else y + 1 for y in range(len(all_data))]
         , yticklabels=[
             'Sum Instance Affected', 'One Instance Affected', 'Both Instances Affected', 'Sum File Affected', 'One File Affected'
             , 'Both Files Affected', 'New Clone Findings'
@@ -236,7 +252,7 @@ def plot_bar(project, successful_runs, successful_result_count, pgf=False):
     width = 0.35  # the width of the bars
 
     pos_x, pos_y = set_size(LATEX_TEXT_WIDTH)
-    fig, ax = plt.subplots(figsize=(pos_x, pos_y - 2))
+    fig, ax = plt.subplots(figsize=(pos_x, 6.5))
     rects1 = ax.barh(y_ticks - width / 2, true_count, width, label='True')
     rects2 = ax.barh(y_ticks + width / 2, false_count, width, label='False')
 
@@ -250,17 +266,17 @@ def plot_bar(project, successful_runs, successful_result_count, pgf=False):
     ax.set_title('Deletion Metrics')
     #    ax.bar_label(rects1, padding=3)
     #   ax.bar_label(rects2, padding=3)
-    ax.text(x=0, y=4.6, s='Average time alive = ' + display_time(avg_time_alive))
-    ax.text(x=0, y=5.1, s='Average instance lifetime = ' + display_time(round(instance_time_alive / successful_result_count)))
-    ax.text(x=0, y=5.6, s='Average sibling lifetime = ' + display_time(round(sibling_time_alive / successful_result_count)))
-    ax.text(x=0, y=6.6, s='If deleted, avg time until deletion = ' + display_time(round(avg_time_until_deletion)))
+    ax.text(x=0, y=4.1, s='Average time alive = ' + display_time(avg_time_alive))
+    ax.text(x=0, y=4.5, s='Average instance lifetime = ' + display_time(round(instance_time_alive / successful_result_count)))
+    ax.text(x=0, y=4.9, s='Average sibling lifetime = ' + display_time(round(sibling_time_alive / successful_result_count)))
+    ax.text(x=0, y=5.3, s='If deleted, avg time until deletion = ' + display_time(round(avg_time_until_deletion)))
     fig.canvas.set_window_title(get_window_title(project))
 
     for p in ax.patches:
         width = p.get_width()
         height = p.get_height()
         x, y = p.get_xy()
-        ax.annotate(f'{width / successful_result_count:.0%}', (x + width / 2, y + height * 0.8), ha='center')
+        ax.annotate(f'{width / successful_result_count:.0%}', (x + width / 2, y + height * 0.7), ha='center')
 
     fig.tight_layout()
 
