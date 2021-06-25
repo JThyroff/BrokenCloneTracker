@@ -100,13 +100,13 @@ def plot_pie(project: str, successful_runs, failed_runs, successful_result_count
     )
 
     x, y = set_size(LATEX_TEXT_WIDTH)
-    fig1, ax1 = plt.subplots(figsize=(x, y + 3))
+    fig1, ax1 = plt.subplots(figsize=(x, y))
     ax1.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=False, startangle=180, colors=color_set)
     ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
     my_circle = plt.Circle((0, 0), 0.7, color='white')
     ax1.add_artist(my_circle)
     fig1.canvas.set_window_title(get_window_title(project))
-    plt.legend(loc=(-0.0, -0.0))
+    # plt.legend(loc=(-0.0, -0.0))
     fig1.tight_layout()
     if pgf:
         plt.savefig(get_pgf_dir(project) + project + '_pie.pgf')
@@ -167,10 +167,10 @@ def plot_instance_metrics(project, successful_runs, failed_runs, boxplot=False, 
     plt.setp(
         axs, yticks=[y + 1 for y in range(len(all_data))]
         , yticklabels=[
-            'Sum Affected', 'One Instance Affected', 'Both Instances Affected', 'File Affected', 'One File Affected'
+            'Sum Instance Affected', 'One Instance Affected', 'Both Instances Affected', 'Sum File Affected', 'One File Affected'
             , 'Both Files Affected', 'New Clone Findings'
         ] if with_file_affections else [
-            'Sum Affected', 'One Instance Affected', 'Both Instances Affected', 'New Clone Findings'
+            'Sum Instance Affected', 'One Instance Affected', 'Both Instances Affected', 'New Clone Findings'
         ]
     )
     axs.invert_yaxis()
@@ -191,6 +191,8 @@ def plot_bar(project, successful_runs, successful_result_count, pgf=False):
     both_instances_deleted_count = 0
     instance_time_alive = 0
     sibling_time_alive = 0
+
+    life_time_sum = 0
     for run in successful_runs:
         alert_commit_timestamp, results = run
         for r in results:
@@ -199,8 +201,10 @@ def plot_bar(project, successful_runs, successful_result_count, pgf=False):
             sibling_time_alive += r.sibling_instance_metrics.time_alive
             if r.instance_metrics.deleted:
                 instance_deleted_count += 1
+                life_time_sum += r.instance_metrics.time_alive
             if r.sibling_instance_metrics.deleted:
                 sibling_deleted_count += 1
+                life_time_sum += r.sibling_instance_metrics.time_alive
             if r.instance_metrics.deleted and r.sibling_instance_metrics.deleted:
                 both_instances_deleted_count += 1
             elif r.instance_metrics.deleted or r.sibling_instance_metrics.deleted:
@@ -227,13 +231,23 @@ def plot_bar(project, successful_runs, successful_result_count, pgf=False):
     ax.invert_yaxis()
     ax.legend()
     avg_time_alive = round((instance_time_alive + sibling_time_alive) / (2 * successful_result_count))
+    avg_time_until_deletion = round(life_time_sum / (instance_deleted_count + sibling_deleted_count))
     ax.set_title('Deletion Metrics')
     #    ax.bar_label(rects1, padding=3)
     #   ax.bar_label(rects2, padding=3)
-    ax.text(x=0, y=4.4, s='Average Time Alive: = ' + display_time(avg_time_alive))
+    ax.text(x=0, y=4.4, s='Average time alive = ' + display_time(avg_time_alive))
     ax.text(x=0, y=4.8, s='Average instance lifetime = ' + display_time(round(instance_time_alive / successful_result_count)))
     ax.text(x=0, y=5.2, s='Average sibling lifetime = ' + display_time(round(sibling_time_alive / successful_result_count)))
+    ax.text(x=0, y=5.6, s='If deleted, avg time until deletion = ' + display_time(round(avg_time_until_deletion)))
     fig.canvas.set_window_title(get_window_title(project))
+
+    for p in ax.patches:
+        width = p.get_width()
+        height = p.get_height()
+        x, y = p.get_xy()
+        ax.annotate(f'{width / successful_result_count:.0%}', (x + width / 2, y + height * 0.8), ha='center')
+
     fig.tight_layout()
+
     if pgf:
         plt.savefig(get_pgf_dir(project) + project + '_bar.pgf')
