@@ -175,7 +175,7 @@ def plot_instance_metrics(project, successful_runs, failed_runs, boxplot=False, 
         flierprops = dict(markerfacecolor='0.75', markersize=2,
                           linestyle='none')
         colormap = 'plasma'
-        axs = sns.boxplot(data=all_data, dodge=True, palette=colormap, orient='h', flierprops=flierprops, **PROPS)
+        axs = sns.boxplot(data=all_data, dodge=True, palette=colormap, orient='h', showfliers=False, flierprops=flierprops, **PROPS)
         axs = sns.stripplot(data=all_data, jitter=True, marker="D", size=2, orient="h", palette=colormap, edgecolor='black', alpha=1)
 
         # axs.boxplot(all_data, showmeans=False, vert=False)

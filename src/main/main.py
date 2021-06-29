@@ -59,8 +59,8 @@ def plot_results(project: str, successful_runs, failed_runs, pgf=False):
         })
     plot_pie(project, successful_runs, failed_runs, successful_result_count, pgf=pgf)
     plot_bar(project, successful_runs, successful_result_count, pgf=pgf)
-    plot_instance_metrics(project, successful_runs, failed_runs, boxplot=True, with_file_affections=False, pgf=pgf)
-    plot_instance_metrics(project, successful_runs, failed_runs, with_file_affections=False, pgf=pgf)
+    plot_instance_metrics(project, successful_runs, failed_runs, boxplot=True, with_file_affections=True, pgf=pgf)
+    plot_instance_metrics(project, successful_runs, failed_runs, with_file_affections=True, pgf=pgf)
 
     plt.show()
 
@@ -68,6 +68,7 @@ def plot_results(project: str, successful_runs, failed_runs, pgf=False):
 def run_analysis(client: TeamscaleClient):
     client.check_api_version()
     alert_file: AlertFile = update_filtered_alert_commits(client, overwrite=False)
+
     printer.separator(LogLevel.INFO)
     printer.blue("Alert commit count: " + str(len(alert_file.alert_commit_list)), LogLevel.INFO)
     start = int(time.time())
@@ -105,10 +106,10 @@ def main(client: TeamscaleClient) -> None:
         failed_runs = result_dict.get("failed runs")
         plot_results(client.project, successful_runs, failed_runs, pgf=pgf)
 
-    read_and_plot(pgf=True)
-    return
-    analyse_one_alert_commit(client, 1458855786000)
     run_analysis(client)
+    return
+    read_and_plot(pgf=True)
+    analyse_one_alert_commit(client, 1518197307000)
     update_filtered_alert_commits(client, overwrite=True)
     get_affected_files(client, 1612210799000)
 
